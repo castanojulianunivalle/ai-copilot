@@ -1,13 +1,13 @@
-# AI-Powered Support Co-Pilot
+# Mesa de Ayuda - Support Co-Pilot (Semestre 1)
 
-Sistema de procesamiento automático de tickets de soporte con IA, dashboard en tiempo real y automatización con n8n.
+Sistema de gestión de tickets de soporte **sin IA**. CRUD transaccional con clasificación por reglas (palabras clave) como línea base de comparación para futuros semestres.
 
-## ✨ Características Destacadas
+## ✨ Características - Semestre 1
 
-- **Dashboard Moderno**: Interfaz responsiva con animaciones suaves, tema oscuro accesible y navegación intuitiva.
-- **Experiencia de Usuario Mejorada**: Notificaciones en tiempo real, búsqueda de tickets, modales para detalles y indicadores visuales con iconos.
-- **Gestión Completa de Tickets**: Crear, editar y eliminar tickets con re-evaluación automática por IA al editar.
-- **Links Directos**: Las notificaciones (email y Telegram) incluyen links directos al ticket específico.
+- **HU-02 (Cliente)**: Crear tickets con título y descripción.
+- **HU-03 (Agente)**: Ver todos los tickets y actualizar estado (Abierto/Cerrado).
+- **HU-04 (Sistema)**: Clasificación por palabras clave (motor de reglas en Python).
+- **Dashboard**: Interfaz React con tema claro/oscuro, búsqueda y paginación.
 - **Accesibilidad**: Soporte completo para navegación por teclado, etiquetas ARIA y alto contraste.
 - **Animaciones Fancy**: Transiciones fluidas con Framer Motion para una experiencia interactiva premium.
 - **Componentes Interactivos**: Botones con estados de carga, spinners animados y feedback visual inmediato.
