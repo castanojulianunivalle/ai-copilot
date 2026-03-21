@@ -11,9 +11,10 @@ Describe el proyecto **Mesa de Ayuda - Support Co-Pilot** (Semestre 1) como un s
 de tickets de soporte técnico **sin IA**, con las siguientes características:
 
 ## Visión General
-Sistema full-stack que permite a usuarios crear tickets con título y descripción, clasificarlos 
-automáticamente por reglas (palabras clave), persistirlos en Supabase y gestionarlos en un dashboard 
-React. El agente puede actualizar el estado (Abierto/Cerrado) de los tickets.
+Sistema full-stack con autenticación por roles (Cliente, Agente, Administrador). Los clientes crean 
+tickets con título y descripción; el sistema los clasifica por reglas (palabras clave), los persiste 
+en Supabase y los muestra en un dashboard React. El agente actualiza el estado (Abierto/Cerrado). 
+El administrador gestiona usuarios (listar, cambiar roles).
 
 ## Arquitectura
 - **Frontend**: React 18 + Vite + Tailwind CSS + Framer Motion + Lucide React. Dashboard con tema claro/oscuro, búsqueda, paginación, modales, edición y eliminación de tickets.
@@ -33,10 +34,13 @@ Categorías: Técnico, Facturación, Comercial, Acceso, Cuenta, Rendimiento, UX/
 
 ## Endpoints API
 - GET /health: health check
+- GET /me: perfil del usuario autenticado (JWT)
 - POST /create-ticket: crear ticket (titulo, description) y clasificar
 - PUT /tickets/{id}: editar ticket y re-clasificar
 - PATCH /tickets/{id}/estado?estado=Abierto|Cerrado: cambiar estado (HU-03)
 - DELETE /tickets/{id}: eliminar ticket
+- GET /admin/users: listar usuarios (rol Administrador)
+- PATCH /admin/users/{id}/role: cambiar rol de usuario (rol Administrador)
 
 ## Estructura de Carpetas
 - python-api/: main.py (clasificación por reglas), requirements.txt, Dockerfile

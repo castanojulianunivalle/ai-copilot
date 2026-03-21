@@ -1,5 +1,4 @@
-# Normalizar finales de línea para todo el proyecto
+# Normalizar saltos de línea: LF en el repo, CRLF en Windows al hacer checkout
 * text=auto eol=lf
-
-# Shell scripts deben usar LF
-*.sh text eol=lf
+*.{cmd,[cC][mM][dD]} text eol=crlf
+*.{bat,[bB][aA][tT]} text eol=crlf
