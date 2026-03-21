@@ -22,6 +22,13 @@ Algunos artefactos combinan ambos ámbitos para mostrar el recorrido completo de
 - El script `daily-reporter-main/scripts/setup_jira_ai_copilot.py` crea en Jira los sprints, versiones e historias alineadas a este plan.
 - Entregables académicos (informes de curso, artículo, sustentación) se gestionan **fuera** del backlog de desarrollo en Jira.
 
+### Calendario (importar)
+
+| Archivo | Uso |
+|---------|-----|
+| [`../calendario-sprints-prs.csv`](../calendario-sprints-prs.csv) | Hitos abrir/cerrar sprint (todos los sprints). |
+| [`../calendario-ceremonias-semestre-I.csv`](../calendario-ceremonias-semestre-I.csv) | **Ceremonias ágiles Semestre I** (Sprints 0–3): Planning, Daily Scrum semanal, Review, Retrospective. Sin eventos en **domingo** (los *Sprint Planning* que coincidían con domingo pasan al **lunes** siguiente). Importación **Google Calendar** (Archivo → Importar). |
+
 ---
 
 ## Significado del logo

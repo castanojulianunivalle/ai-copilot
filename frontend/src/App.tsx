@@ -343,7 +343,7 @@ export default function App() {
             <div>
               <h1 className="text-2xl font-bold text-white">AI Support Co-Pilot</h1>
               <p className="text-primary-100 dark:text-primary-200">
-                Mesa de Ayuda - Gestión de tickets (Semestre 1).
+                Mesa de Ayuda - Gestión de tickets.
               </p>
             </div>
           </div>

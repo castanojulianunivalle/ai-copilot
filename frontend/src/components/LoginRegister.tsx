@@ -51,7 +51,7 @@ export default function LoginRegister({ onSignIn, onSignUp }: Props) {
           <img src="/logo.svg" alt="Logo" className="h-16 w-16" />
         </div>
         <h1 className="text-2xl font-bold text-center mb-2">Mesa de Ayuda</h1>
-        <p className="text-gray-500 dark:text-gray-400 text-center mb-6">Support Co-Pilot - Semestre 1</p>
+        <p className="text-gray-500 dark:text-gray-400 text-center mb-6">AI Support Co-Pilot</p>
 
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
           <div className="flex gap-2 mb-6">
