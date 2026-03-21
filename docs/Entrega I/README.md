@@ -15,6 +15,13 @@ Este repositorio contiene la documentación requerida para la fase de inicio y p
 
 Algunos artefactos combinan ambos ámbitos para mostrar el recorrido completo del proyecto.
 
+### Plan de sprints (desarrollo)
+
+- **9 sprints** (Sprint 0 a 8), **3 semanas** cada uno.
+- **Sprint 0** (termina el **4 de abril** de 2026): documentación **técnica**, mockups y preparación de entorno — **no** incluye redacción de documentos de entrega académica como tarea de sprint.
+- El script `daily-reporter-main/scripts/setup_jira_ai_copilot.py` crea en Jira los sprints, versiones e historias alineadas a este plan.
+- Entregables académicos (informes de curso, artículo, sustentación) se gestionan **fuera** del backlog de desarrollo en Jira.
+
 ---
 
 ## Significado del logo
@@ -35,6 +42,7 @@ El logo de AI Support Co-Pilot representa la **Mesa de Ayuda** y el soporte téc
 
 - [Definición, Contexto y Justificación del Problema](./1.definicion_justificacion.md)
 - [Arquitectura, Componente Inteligente y Stack Tecnológico](./2.arquitectura_stack.md)
+- [Diagrama de componentes y flujo (Mermaid)](../arquitectura_componentes_y_flujo.md)
 
 ### 2. Modelado de Procesos
 
