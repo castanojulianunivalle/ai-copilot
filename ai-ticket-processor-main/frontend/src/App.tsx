@@ -1,27 +1,25 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, Fragment } from 'react';
 import { supabase } from './lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Eye, CheckCircle, XCircle, AlertCircle, Loader2, Search, Edit, Trash2, X } from 'lucide-react';
+import { Plus, Eye, CheckCircle, XCircle, AlertCircle, Loader2, Search, Edit, Trash2, X, LogOut, Users } from 'lucide-react';
 import ThemeToggle from './components/ThemeToggle';
+import { useAuth } from './contexts/AuthContext';
+import LoginRegister from './components/LoginRegister';
+import AdminUsers from './components/AdminUsers';
 
 type Ticket = {
   id: string;
   created_at: string;
+  titulo: string;
   description: string;
   category: string | null;
-  sentiment: string | null;
-  processed: boolean;
+  estado: string;
 };
 
-const sentimentColor = (sentiment?: string | null) => {
-  switch ((sentiment || '').toLowerCase()) {
-    case 'negativo':
-      return 'bg-red-500/10 text-red-300 border-red-500/30';
-    case 'positivo':
-      return 'bg-green-500/10 text-green-300 border-green-500/30';
-    default:
-      return 'bg-slate-500/10 text-slate-300 border-slate-500/30';
-  }
+const estadoColor = (estado: string) => {
+  return estado === 'Cerrado'
+    ? 'bg-green-500/10 text-green-300 border-green-500/30'
+    : 'bg-amber-500/10 text-amber-300 border-amber-500/30';
 };
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8001';
@@ -39,11 +37,12 @@ type TourStep = {
 };
 
 export default function App() {
+  const { session, profile, loading: authLoading, signIn, signUp, signOut } = useAuth();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
-  const [newTicket, setNewTicket] = useState('');
+  const [newTitulo, setNewTitulo] = useState('');
+  const [newDescription, setNewDescription] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [realtimeStatus, setRealtimeStatus] = useState('connecting');
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [editingTicket, setEditingTicket] = useState<Ticket | null>(null);
@@ -57,6 +56,7 @@ export default function App() {
   const [tourStepIndex, setTourStepIndex] = useState(0);
   const [highlightedElement, setHighlightedElement] = useState<HTMLElement | null>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [adminView, setAdminView] = useState(false);
   const itemsPerPage = 9; // 3x3 grid
   const currentPageRef = useRef(currentPage);
   const headerRef = useRef<HTMLElement>(null);
@@ -66,7 +66,7 @@ export default function App() {
   const tourSteps: TourStep[] = [
     {
       title: 'Bienvenido',
-      description: 'Este dashboard muestra los tickets en tiempo real.',
+      description: 'Este dashboard gestiona los tickets de soporte.',
       targetKey: 'header',
     },
     {
@@ -146,77 +146,38 @@ export default function App() {
     }
   }, [showTour, tourStepIndex, tourSteps]);
 
+  const fetchTickets = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('tickets')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (!error && data) setTickets(data as Ticket[]);
+    setLoading(false);
+  };
+
   useEffect(() => {
-    const fetchTickets = async () => {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('tickets')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (!error && data) setTickets(data as Ticket[]);
-      setLoading(false);
-    };
-
-    fetchTickets();
-
-    const upsertTicket = (incoming: Ticket) => {
-      setTickets((prev) => {
-        const index = prev.findIndex((t) => t.id === incoming.id);
-        if (index >= 0) {
-          const next = [...prev];
-          next[index] = incoming;
-          return next;
-        }
-        return [incoming, ...prev];
-      });
-    };
-
-    const channel = supabase
-      .channel('tickets-realtime')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'tickets' },
-        (payload) => {
-          if (payload.eventType === 'INSERT' && payload.new) {
-            upsertTicket(payload.new as Ticket);
-            addNotification('success', 'Nuevo ticket recibido');
-            jumpToFirstPage();
-            return;
-          }
-          if (payload.eventType === 'UPDATE' && payload.new) {
-            upsertTicket(payload.new as Ticket);
-            return;
-          }
-          if (payload.eventType === 'DELETE' && payload.old) {
-            setTickets((prev) =>
-              prev.filter((ticket) => ticket.id !== (payload.old as Ticket).id)
-            );
-            return;
-          }
-          fetchTickets();
-        }
-      )
-      .subscribe((status) => setRealtimeStatus(status));
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
+    if (session) fetchTickets();
+    else setTickets([]);
+  }, [session]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTicket.trim()) return;
+    if (!newTitulo.trim() || !newDescription.trim()) return;
 
     setSubmitting(true);
     try {
       const response = await fetch(`${API_URL}/create-ticket`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ description: newTicket }),
+        headers: authHeaders(),
+        body: JSON.stringify({ titulo: newTitulo, description: newDescription }),
       });
       if (response.ok) {
-        setNewTicket('');
+        setNewTitulo('');
+        setNewDescription('');
         addNotification('success', 'Ticket creado exitosamente');
+        const { data } = await supabase.from('tickets').select('*').order('created_at', { ascending: false });
+        if (data) setTickets(data as Ticket[]);
         jumpToFirstPage();
       } else {
         addNotification('error', 'Error al crear el ticket');
@@ -241,14 +202,16 @@ export default function App() {
     try {
       const response = await fetch(`${API_URL}/tickets/${editingTicket.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(),
         body: JSON.stringify({ description: editDescription }),
       });
       if (response.ok) {
         setEditingTicket(null);
         setEditDescription('');
-        addNotification('success', 'Ticket actualizado y re-evaluado por IA');
+        addNotification('success', 'Ticket actualizado');
         setSelectedTicket(null);
+        const { data } = await supabase.from('tickets').select('*').order('created_at', { ascending: false });
+        if (data) setTickets(data as Ticket[]);
       } else {
         const error = await response.json();
         addNotification('error', error.detail || 'Error al actualizar el ticket');
@@ -258,6 +221,23 @@ export default function App() {
       addNotification('error', 'Error de conexión al actualizar ticket');
     } finally {
       setIsUpdating(false);
+    }
+  };
+
+  const handleToggleEstado = async (ticketId: string, currentEstado: string) => {
+    const nuevoEstado = currentEstado === 'Abierto' ? 'Cerrado' : 'Abierto';
+    try {
+      const response = await fetch(`${API_URL}/tickets/${ticketId}/estado?estado=${nuevoEstado}`, {
+        method: 'PATCH',
+        headers: authHeaders(),
+      });
+      if (response.ok) {
+        addNotification('success', `Estado: ${nuevoEstado}`);
+        setTickets(prev => prev.map(t => t.id === ticketId ? { ...t, estado: nuevoEstado } : t));
+        if (selectedTicket?.id === ticketId) setSelectedTicket({ ...selectedTicket, estado: nuevoEstado });
+      }
+    } catch (error) {
+      addNotification('error', 'Error al actualizar estado');
     }
   };
 
@@ -272,11 +252,14 @@ export default function App() {
     try {
       const response = await fetch(`${API_URL}/tickets/${confirmDelete.ticketId}`, {
         method: 'DELETE',
+        headers: authHeaders(),
       });
       if (response.ok) {
         addNotification('success', 'Ticket eliminado exitosamente');
         setSelectedTicket(null);
         setConfirmDelete(null);
+        const { data } = await supabase.from('tickets').select('*').order('created_at', { ascending: false });
+        if (data) setTickets(data as Ticket[]);
       } else {
         addNotification('error', 'Error al eliminar el ticket');
       }
@@ -302,7 +285,40 @@ export default function App() {
     }
   }, [tickets]);
 
+  const authHeaders = (): HeadersInit => ({
+    'Content-Type': 'application/json',
+    ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+  });
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <Loader2 className="w-12 h-12 animate-spin text-primary-500" />
+      </div>
+    );
+  }
+
+  if (!session) {
+    return (
+      <LoginRegister
+        onSignIn={async (email, password) => {
+          const { error } = await signIn(email, password);
+          return { error: error?.message };
+        }}
+        onSignUp={async (email, password) => {
+          const { error } = await signUp(email, password);
+          return { error: error?.message };
+        }}
+      />
+    );
+  }
+
+  const isCliente = profile?.role === 'cliente';
+  const isAgente = profile?.role === 'agente' || profile?.role === 'administrador';
+  const isAdministrador = profile?.role === 'administrador';
+
   const filteredTickets = tickets.filter(ticket =>
+    ticket.titulo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     ticket.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
     ticket.category?.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -327,51 +343,88 @@ export default function App() {
             <div>
               <h1 className="text-2xl font-bold text-white">AI Support Co-Pilot</h1>
               <p className="text-primary-100 dark:text-primary-200">
-                Dashboard en tiempo real de tickets procesados.
+                Mesa de Ayuda - Gestión de tickets (Semestre 1).
               </p>
-              <div className="mt-2 text-xs text-primary-200 dark:text-primary-300">
-                Realtime: <span className="text-white" aria-live="polite">{realtimeStatus}</span>
-              </div>
             </div>
           </div>
-          <ThemeToggle />
+          <div className="flex items-center gap-2">
+            {isAdministrador && (
+              <button
+                onClick={() => setAdminView(!adminView)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  adminView ? 'bg-white/30 text-white' : 'bg-white/10 hover:bg-white/20 text-primary-100'
+                }`}
+                title={adminView ? 'Ver tickets' : 'Gestión de usuarios'}
+              >
+                <Users className="w-4 h-4 inline mr-1.5 -mt-0.5" />
+                {adminView ? 'Tickets' : 'Usuarios'}
+              </button>
+            )}
+            <span className="text-sm text-primary-100">
+              {profile?.role === 'administrador' ? 'Administrador' : profile?.role === 'agente' ? 'Agente' : 'Cliente'}
+            </span>
+            <button
+              onClick={() => signOut()}
+              className="p-2 rounded-lg hover:bg-white/20 transition-colors"
+              title="Cerrar sesión"
+              aria-label="Cerrar sesión"
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
+            <ThemeToggle />
+          </div>
         </motion.header>
 
+        {adminView && isAdministrador ? (
+          <AdminUsers />
+        ) : (
+        <Fragment>
+        {isCliente && (
         <motion.section
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
           className="mb-6 card"
         >
-          <h2 className="mb-3 font-semibold">Gestion de tickets</h2>
+          <h2 className="mb-3 font-semibold">Crear ticket</h2>
           <form
             ref={formRef}
             onSubmit={handleSubmit}
-            className={`flex gap-2 ${
+            className={`flex flex-col gap-2 ${
               highlightedElement === formRef.current ? 'ring-4 ring-yellow-400 ring-offset-4 ring-offset-slate-900 relative z-50' : ''
             }`}
             aria-label="Crear ticket"
           >
             <input
               type="text"
+              aria-label="Título del ticket"
+              value={newTitulo}
+              onChange={(e) => setNewTitulo(e.target.value)}
+              placeholder="Título del ticket..."
+              className="rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-2 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus-visible:ring-2 focus-visible:ring-primary-400"
+              disabled={submitting}
+            />
+            <input
+              type="text"
               aria-label="Descripción del ticket"
-              value={newTicket}
-              onChange={(e) => setNewTicket(e.target.value)}
+              value={newDescription}
+              onChange={(e) => setNewDescription(e.target.value)}
               placeholder="Describe el problema o consulta..."
               className="flex-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-2 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus-visible:ring-2 focus-visible:ring-primary-400"
               disabled={submitting}
             />
             <button
               type="submit"
-              disabled={submitting || !newTicket.trim()}
+              disabled={submitting || !newTitulo.trim() || !newDescription.trim()}
               className="btn-primary disabled:opacity-50 flex items-center gap-2"
-              aria-disabled={submitting || !newTicket.trim()}
+              aria-disabled={submitting || !newTitulo.trim() || !newDescription.trim()}
             >
               {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
               {submitting ? 'Creando...' : 'Crear'}
             </button>
           </form>
         </motion.section>
+        )}
 
         <motion.section
           initial={{ opacity: 0, y: 20 }}
@@ -419,8 +472,9 @@ export default function App() {
                     <div className="flex items-start justify-between mb-2">
                       <div className="text-sm text-gray-500 dark:text-gray-400 font-mono">#{ticket.id.slice(-8)}</div>
                     </div>
-                    <h3 className="font-medium text-gray-900 dark:text-gray-100 mb-2 line-clamp-2">{ticket.description}</h3>
+                    <h3 className="font-medium text-gray-900 dark:text-gray-100 mb-2 line-clamp-2">{ticket.titulo}</h3>
                     <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                      <span className={`px-2 py-0.5 rounded border ${estadoColor(ticket.estado)}`}>{ticket.estado}</span>
                       <span>{ticket.category || 'Sin categoría'}</span>
                       <span>{new Date(ticket.created_at).toLocaleDateString()}</span>
                     </div>
@@ -477,6 +531,8 @@ export default function App() {
             )}
           </div>
         </motion.section>
+        </Fragment>
+        )}
 
         {/* Modal para detalles de ticket */}
         <AnimatePresence>
@@ -523,10 +579,20 @@ export default function App() {
                 </div>
                 <div className="space-y-2">
                   <p><strong>ID:</strong> <span className="font-mono text-sm">{selectedTicket.id}</span></p>
+                  <p><strong>Título:</strong> {selectedTicket.titulo}</p>
                   <p><strong>Descripción:</strong> {selectedTicket.description}</p>
                   <p><strong>Categoría:</strong> {selectedTicket.category || 'Sin categoría'}</p>
-                  <p><strong>Sentimiento:</strong> {selectedTicket.sentiment || 'Neutral'}</p>
-                  <p><strong>Estado:</strong> {selectedTicket.processed ? 'Procesado' : 'Pendiente'}</p>
+                  <p><strong>Estado:</strong> <span className={`px-2 py-0.5 rounded text-xs border ${estadoColor(selectedTicket.estado)}`}>{selectedTicket.estado}</span></p>
+                  {isAgente && (
+                  <div className="flex gap-2 pt-2">
+                    <button
+                      onClick={() => handleToggleEstado(selectedTicket.id, selectedTicket.estado)}
+                      className="text-sm px-3 py-1 rounded border border-primary-500/50 hover:bg-primary-500/20"
+                    >
+                      Cambiar a {selectedTicket.estado === 'Abierto' ? 'Cerrado' : 'Abierto'}
+                    </button>
+                  </div>
+                  )}
                   <p><strong>Creado:</strong> {new Date(selectedTicket.created_at).toLocaleString()}</p>
                 </div>
                 <button
@@ -562,7 +628,7 @@ export default function App() {
               >
                 <h3 className="text-lg font-semibold mb-4">Editar Ticket</h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                  El ticket será re-evaluado por IA después de guardar.
+                  La categoría se actualizará automáticamente según el contenido (motor de reglas).
                 </p>
                 <textarea
                   value={editDescription}

@@ -7,24 +7,24 @@ API_URL="${API_URL:-http://localhost:8001}"
 
 echo "🌱 Insertando tickets de prueba..."
 
-# Ticket 1: Técnico - Negativo
+# Ticket 1: Acceso
 curl -X POST "$API_URL/create-ticket" \
   -H "Content-Type: application/json" \
-  -d '{"description": "No puedo acceder a mi cuenta desde el móvil"}'
+  -d '{"titulo": "Error de acceso móvil", "description": "No puedo acceder a mi cuenta desde el móvil"}'
 
 echo ""
 
-# Ticket 2: Facturación - Neutral
+# Ticket 2: Facturación
 curl -X POST "$API_URL/create-ticket" \
   -H "Content-Type: application/json" \
-  -d '{"description": "Necesito factura de este mes"}'
+  -d '{"titulo": "Solicitud de factura", "description": "Necesito factura de este mes"}'
 
 echo ""
 
-# Ticket 3: Comercial - Positivo
+# Ticket 3: Comercial
 curl -X POST "$API_URL/create-ticket" \
   -H "Content-Type: application/json" \
-  -d '{"description": "¿Tienen descuentos para empresas? Me encanta el servicio"}'
+  -d '{"titulo": "Consulta comercial", "description": "¿Tienen descuentos para empresas?"}'
 
 echo ""
 echo "✅ Tickets de prueba insertados"

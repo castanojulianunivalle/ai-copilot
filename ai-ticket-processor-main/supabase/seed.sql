@@ -1,6 +1,7 @@
--- Datos de prueba
-insert into public.tickets (description, category, sentiment, processed)
+-- Datos de prueba (Semestre 1)
+insert into public.tickets (titulo, description, category, estado)
 values
-  ('No puedo acceder a mi cuenta desde el móvil', 'Técnico', 'Negativo', true),
-  ('Necesito factura de este mes', 'Facturación', 'Neutral', true),
-  ('¿Tienen descuentos para empresas?', 'Comercial', 'Positivo', false);
+  ('Error de acceso móvil', 'No puedo acceder a mi cuenta desde el móvil', 'Acceso', 'Abierto'),
+  ('Solicitud de factura', 'Necesito factura de este mes', 'Facturación', 'Cerrado'),
+  ('Consulta comercial', '¿Tienen descuentos para empresas?', 'Comercial', 'Abierto')
+;

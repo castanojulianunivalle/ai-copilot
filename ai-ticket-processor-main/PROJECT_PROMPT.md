@@ -1,4 +1,4 @@
-# Prompt: Documentación del Proyecto AI Support Co-Pilot
+# Prompt: Documentación del Proyecto - Mesa de Ayuda (Semestre 1)
 
 > Este documento funciona como prompt reutilizable para explicar el proyecto a desarrolladores o IA. Copia y pega el bloque de prompt según necesites.
 
@@ -7,52 +7,45 @@
 ## Bloque de Prompt (Copy-Paste)
 
 ```
-Describe el proyecto **AI Support Co-Pilot** (AI-Ticket-Processor) como un sistema de procesamiento 
-automático de tickets de soporte técnico con las siguientes características:
+Describe el proyecto **Mesa de Ayuda - Support Co-Pilot** (Semestre 1) como un sistema de gestión 
+de tickets de soporte técnico **sin IA**, con las siguientes características:
 
 ## Visión General
-Sistema full-stack que permite a usuarios crear tickets de soporte, clasificarlos automáticamente 
-con IA (LLM), persistirlos en Supabase, visualizarlos en tiempo real en un dashboard React, y 
-disparar notificaciones por email/Telegram cuando el sentimiento es negativo.
+Sistema full-stack que permite a usuarios crear tickets con título y descripción, clasificarlos 
+automáticamente por reglas (palabras clave), persistirlos en Supabase y gestionarlos en un dashboard 
+React. El agente puede actualizar el estado (Abierto/Cerrado) de los tickets.
 
 ## Arquitectura
-- **Frontend**: React 18 + Vite + Tailwind CSS + Framer Motion + Lucide React. Dashboard SPA con tema claro/oscuro, animaciones, búsqueda, paginación, modales de detalle, edición y eliminación de tickets.
-- **Backend**: FastAPI (Python) con Pydantic. API REST que orquesta clasificación, persistencia y notificaciones.
-- **Base de datos**: Supabase (PostgreSQL) con Realtime para actualizaciones en vivo.
-- **IA**: Cliente HTTP compatible con API OpenAI (Hugging Face Router o vLLM). Modelo por defecto: meta-llama/Llama-3.1-8B-Instruct.
-- **Automatización**: n8n (workflow vía webhook) para enviar emails y mensajes de Telegram cuando el sentimiento es "Negativo".
+- **Frontend**: React 18 + Vite + Tailwind CSS + Framer Motion + Lucide React. Dashboard con tema claro/oscuro, búsqueda, paginación, modales, edición y eliminación de tickets.
+- **Backend**: FastAPI (Python) con Pydantic. API REST para CRUD y clasificación por reglas.
+- **Base de datos**: Supabase (PostgreSQL) con RLS.
+- **Clasificación**: Motor de reglas (Python if/else) basado en palabras clave. Línea base para comparación en Semestre 3.
 
 ## Flujo de Datos
-1. Usuario crea ticket en el frontend → POST /create-ticket a la API.
-2. API inserta ticket en Supabase con processed=false.
-3. classify_ticket(description): si LLM disponible → invoca modelo; si no → classify_with_rules() (palabras clave).
-4. Normaliza y valida salida (categoría, sentimiento).
-5. Actualiza Supabase (category, sentiment, processed=true).
-6. Si sentimiento = "Negativo" → POST webhook n8n → n8n envía email + Telegram.
-7. Supabase Realtime notifica cambios → frontend actualiza UI en vivo.
+1. Usuario crea ticket (título + descripción) → POST /create-ticket a la API.
+2. API clasifica con classify_with_rules(text) según palabras clave.
+3. API inserta en Supabase: titulo, description, category, estado="Abierto".
+4. Frontend muestra tickets; agente puede cambiar estado vía PATCH /tickets/{id}/estado.
 
 ## Modelo de Datos (Supabase)
-Tabla tickets: id (uuid), created_at, description (text), category (text), sentiment (text), processed (boolean).
+Tabla tickets: id (uuid), created_at, titulo (text), description (text), category (text), estado (Abierto|Cerrado).
 Categorías: Técnico, Facturación, Comercial, Acceso, Cuenta, Rendimiento, UX/UI, Seguridad, Integraciones, Móvil, Solicitudes.
-Sentimientos: Positivo, Neutral, Negativo.
 
 ## Endpoints API
 - GET /health: health check
-- GET /diagnostics: estado del LLM y configuración
-- POST /create-ticket: crear ticket y clasificar
-- POST /process-ticket: clasificar ticket (opcional: actualizar por ticket_id)
-- PUT /tickets/{id}: editar y re-evaluar con IA
+- POST /create-ticket: crear ticket (titulo, description) y clasificar
+- PUT /tickets/{id}: editar ticket y re-clasificar
+- PATCH /tickets/{id}/estado?estado=Abierto|Cerrado: cambiar estado (HU-03)
 - DELETE /tickets/{id}: eliminar ticket
 
 ## Estructura de Carpetas
-- python-api/: main.py (lógica), requirements.txt, Dockerfile
+- python-api/: main.py (clasificación por reglas), requirements.txt, Dockerfile
 - frontend/: src/App.tsx (UI principal), lib/supabase.ts, components/
-- supabase/: setup.sql (esquema + Realtime + RLS), seed.sql
-- n8n-workflow/: workflow.json (flujo email + Telegram)
+- supabase/: setup.sql (esquema + RLS), seed.sql
 - docker-compose.yml, start.sh, setup-env.sh, seed-api.sh
 
 ## Variables de Entorno Principales
-API: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, HF_API_TOKEN, HF_MODEL, LLM_API_BASE_URL, N8N_WEBHOOK_URL.
+API: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, PORT.
 Frontend: VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, VITE_API_URL.
 
 ## Ejecución
@@ -66,21 +59,18 @@ Frontend: VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, VITE_API_URL.
 
 | Componente | Ubicación | Rol |
 |------------|-----------|-----|
-| API principal | `python-api/main.py` | Clasificación, Supabase, webhook n8n |
-| UI principal | `frontend/src/App.tsx` | Dashboard, CRUD, Realtime, tema |
-| Esquema BD | `supabase/setup.sql` | Tabla tickets, Realtime, RLS |
-| Workflow n8n | `n8n-workflow/workflow.json` | Notificaciones Email + Telegram |
+| API principal | `python-api/main.py` | CRUD, clasificación por reglas |
+| UI principal | `frontend/src/App.tsx` | Dashboard, CRUD, tema, toggle estado |
+| Esquema BD | `supabase/setup.sql` | Tabla tickets, RLS |
 | Docker | `docker-compose.yml` | Orquestación local |
-| Cliente LLM | `main.py` → OpenAICompatibleAPI | HF Router / vLLM |
-| Clasificación fallback | `main.py` → classify_with_rules | Reglas por palabras clave |
+| Motor de reglas | `main.py` → classify_with_rules | Clasificación por palabras clave (HU-04) |
 
 ---
 
 ## Documentación Adicional del Proyecto
 
-- **README.md**: Resumen, características, despliegue.
-- **QUICKSTART.md**: Configuración paso a paso, Supabase, .env, n8n, Gmail, Telegram.
-- **DEPLOY.md**: Despliegue en Render + Vercel, troubleshooting.
-- **TESTING.md**: Pruebas manuales, curl, Realtime, n8n.
+- **README.md**: Resumen, características, despliegue Semestre 1.
+- **Plan.MD**: Plan maestro completo (Semestres 1, 2 y 3).
+- **QUICKSTART.md**: Configuración paso a paso.
+- **DEPLOY.md**: Despliegue en Render + Vercel.
 - **python-api/ENV_EXAMPLE.md**: Variables de la API.
-- **frontend/ENV_EXAMPLE.md**: Variables del frontend.
