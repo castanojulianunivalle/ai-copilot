@@ -1,0 +1,327 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Daily Reporter - Lambda + EventBridge infrastructure for automated daily reports'
+
+Parameters:
+  ClickUpToken:
+    Type: String
+    Description: ClickUp API token (pk_...)
+    NoEcho: true
+  
+  ClickUpListId:
+    Type: String
+    Description: ClickUp List ID where daily tasks are created
+  
+  ClickUpTaskTemplateId:
+    Type: String
+    Default: ''
+    Description: ClickUp Task Template ID (preferred, e.g., t-86c42qpd6)
+  
+  ClickUpTemplateTaskId:
+    Type: String
+    Default: ''
+    Description: Legacy ClickUp Template Task ID (fallback)
+  
+  ClickUpWriteMode:
+    Type: String
+    Default: 'merge'
+    AllowedValues: ['comment', 'description', 'merge']
+    Description: Write mode for ClickUp updates
+  
+  ClickUpOwnerId:
+    Type: String
+    Default: ''
+    Description: ClickUp Owner ID (optional, auto-detected if empty)
+  
+  ClickUpHeaderPlanningTaskId:
+    Type: String
+    Default: ''
+    Description: ClickUp Header Task ID for Planning section (required if write_mode=merge)
+  
+  ClickUpHeaderDailySummaryTaskId:
+    Type: String
+    Default: ''
+    Description: ClickUp Header Task ID for Daily Summary section (required if write_mode=merge)
+  
+  ClickUpHeaderFinalSummaryTaskId:
+    Type: String
+    Default: ''
+    Description: ClickUp Header Task ID for Final Summary section (required if write_mode=merge)
+  
+  ClickUpEmptyTaskTemplateId:
+    Type: String
+    Default: ''
+    Description: ClickUp Empty Task Template ID (for report2 merge mode)
+  
+  ClickUpStripMarkersOnClose:
+    Type: String
+    Default: 'true'
+    AllowedValues: ['true', 'false']
+    Description: Whether to strip DR markers when closing task
+
+  LowLoadMinHours:
+    Type: String
+    Default: '6'
+    Description: Minimum NON-QA team workload hours (story-points-based) before pinging for more tasks
+
+  LowLoadMentionUsers:
+    Type: String
+    Default: 'manual@unlimitech.cloud,moises@unlimitech.cloud'
+    Description: Comma-separated emails to mention when capacity is low
+  
+  JiraBaseUrl:
+    Type: String
+    Description: JIRA base URL (e.g., https://your-domain.atlassian.net)
+  
+  JiraEmail:
+    Type: String
+    Description: JIRA email for API authentication
+  
+  JiraApiToken:
+    Type: String
+    Description: JIRA API token
+    NoEcho: true
+  
+  JiraDevFrontendBoardId:
+    Type: Number
+    Default: 32
+    Description: JIRA Frontend Board ID
+  
+  JiraDevBackendBoardId:
+    Type: Number
+    Default: 31
+    Description: JIRA Backend Board ID
+  
+  JiraQaBoardId:
+    Type: Number
+    Default: 168
+    Description: JIRA QA Board ID
+  
+  JiraExcludeUser:
+    Type: String
+    Default: ''
+    Description: JIRA user to exclude from reports (displayName or emailAddress)
+
+Resources:
+  # S3 Bucket for Lambda deployment packages
+  DeploymentBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${AWS::StackName}-deployment-packages-${AWS::AccountId}'
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteOldPackages
+            Status: Enabled
+            ExpirationInDays: 14  # Keep packages for 14 days to stay in free tier
+            NoncurrentVersionExpirationInDays: 7
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 1  # Avoid orphan multipart uploads billing
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  # IAM Role for Lambda
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${AWS::StackName}-lambda-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: CloudWatchLogs
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${AWS::StackName}-daily-reporter:*'
+        - PolicyName: DeploymentBucketAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:ListBucket
+                Resource: !GetAtt DeploymentBucket.Arn
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                Resource: !Sub '${DeploymentBucket.Arn}/*'
+
+  # Lambda Function
+  LambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-daily-reporter'
+      Runtime: python3.11
+      Handler: lambda_handler.handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Timeout: 300  # 5 minutes (max for free tier)
+      MemorySize: 256  # Minimum for cost optimization
+      Environment:
+        Variables:
+          CLICKUP_TOKEN: !Ref ClickUpToken
+          CLICKUP_LIST_ID: !Ref ClickUpListId
+          CLICKUP_TASK_TEMPLATE_ID: !Ref ClickUpTaskTemplateId
+          CLICKUP_TEMPLATE_TASK_ID: !Ref ClickUpTemplateTaskId
+          CLICKUP_WRITE_MODE: !Ref ClickUpWriteMode
+          CLICKUP_OWNER_ID: !Ref ClickUpOwnerId
+          CLICKUP_HEADER_PLANNING_TASK_ID: !Ref ClickUpHeaderPlanningTaskId
+          CLICKUP_HEADER_DAILY_SUMMARY_TASK_ID: !Ref ClickUpHeaderDailySummaryTaskId
+          CLICKUP_HEADER_FINAL_SUMMARY_TASK_ID: !Ref ClickUpHeaderFinalSummaryTaskId
+          CLICKUP_EMPTY_TASK_TEMPLATE_ID: !Ref ClickUpEmptyTaskTemplateId
+          CLICKUP_STRIP_MARKERS_ON_CLOSE: !Ref ClickUpStripMarkersOnClose
+          LOW_LOAD_MIN_HOURS: !Ref LowLoadMinHours
+          LOW_LOAD_MENTION_USERS: !Ref LowLoadMentionUsers
+          STATE_BUCKET: !Ref DeploymentBucket
+          STATE_KEY: 'state/low_load.json'
+          JIRA_BASE_URL: !Ref JiraBaseUrl
+          JIRA_EMAIL: !Ref JiraEmail
+          JIRA_API_TOKEN: !Ref JiraApiToken
+          JIRA_DEV_FRONTEND_BOARD_ID: !Ref JiraDevFrontendBoardId
+          JIRA_DEV_BACKEND_BOARD_ID: !Ref JiraDevBackendBoardId
+          JIRA_QA_BOARD_ID: !Ref JiraQaBoardId
+          # Optional JQL overrides (empty by default)
+          JIRA_DEV_JQL: ''
+          JIRA_QA_JQL: ''
+          # Optional: exclude issues assigned to this Jira user from reports (empty by default)
+          JIRA_EXCLUDE_USER: !Ref JiraExcludeUser
+          # Runtime flags (empty by default, set via EventBridge events)
+          RUN_PHASE: ''
+          FORCE_DATE: ''
+          FORCE_RUN: 'false'
+      Code:
+        ZipFile: |
+          # Placeholder - actual code will be deployed via package/deploy script
+          def handler(event, context):
+              return {'statusCode': 200, 'body': 'Deploy code package here'}
+      Description: 'Daily Reporter - Automated daily report generation'
+
+  # CloudWatch Log Group
+  LambdaLogGroup:
+    Type: AWS::Logs::LogGroup
+    DependsOn: LambdaFunction
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${AWS::StackName}-daily-reporter'
+      RetentionInDays: 7  # Keep logs for 7 days to minimize costs
+
+  # EventBridge Rule - Report #1 (11:00 AM Colombia = 16:00 UTC)
+  EventBridgeRuleReport1:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub '${AWS::StackName}-report1-11am'
+      Description: 'Daily Report #1 at 11:00 AM Colombia time (4:00 PM UTC)'
+      ScheduleExpression: 'cron(30 14 * * ? *)'  # 4:00 PM UTC = 09:30 AM Colombia (UTC-5)
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt LambdaFunction.Arn
+          Id: 'Report1Target'
+          Input: !Sub |
+            {
+              "phase": "report1"
+            }
+
+  # EventBridge Rule - Report #2 (2:00 PM Colombia = 19:00 UTC)
+  EventBridgeRuleReport2:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub '${AWS::StackName}-report2-2pm'
+      Description: 'Daily Report #2 at 2:00 PM Colombia time (7:00 PM UTC)'
+      ScheduleExpression: 'cron(30 18 * * ? *)'  # 7:00 PM UTC = 3:00 PM Colombia (UTC-5)
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt LambdaFunction.Arn
+          Id: 'Report2Target'
+          Input: !Sub |
+            {
+              "phase": "report2"
+            }
+
+  # EventBridge Rule - Close (6:00 PM Colombia = 23:00 UTC)
+  EventBridgeRuleClose:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub '${AWS::StackName}-close-6pm'
+      Description: 'Daily Report Close at 6:00 PM Colombia time (11:00 PM UTC)'
+      ScheduleExpression: 'cron(0 23 * * ? *)'  # 11:00 PM UTC = 6:00 PM Colombia (UTC-5)
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt LambdaFunction.Arn
+          Id: 'CloseTarget'
+          Input: !Sub |
+            {
+              "phase": "close"
+            }
+
+  # Lambda Permission for EventBridge
+  LambdaPermissionReport1:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref LambdaFunction
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt EventBridgeRuleReport1.Arn
+
+  LambdaPermissionReport2:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref LambdaFunction
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt EventBridgeRuleReport2.Arn
+
+  LambdaPermissionClose:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref LambdaFunction
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt EventBridgeRuleClose.Arn
+
+Outputs:
+  DeploymentBucketName:
+    Description: 'S3 Bucket Name for deployment packages'
+    Value: !Ref DeploymentBucket
+    Export:
+      Name: !Sub '${AWS::StackName}-deployment-bucket-name'
+
+  DeploymentBucketArn:
+    Description: 'S3 Bucket ARN for deployment packages'
+    Value: !GetAtt DeploymentBucket.Arn
+
+  LambdaFunctionName:
+    Description: 'Lambda Function Name'
+    Value: !Ref LambdaFunction
+    Export:
+      Name: !Sub '${AWS::StackName}-lambda-function-name'
+
+  LambdaFunctionArn:
+    Description: 'Lambda Function ARN'
+    Value: !GetAtt LambdaFunction.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-lambda-function-arn'
+
+  EventBridgeRuleReport1Arn:
+    Description: 'EventBridge Rule ARN for Report #1'
+    Value: !GetAtt EventBridgeRuleReport1.Arn
+
+  EventBridgeRuleReport2Arn:
+    Description: 'EventBridge Rule ARN for Report #2'
+    Value: !GetAtt EventBridgeRuleReport2.Arn
+
+  EventBridgeRuleCloseArn:
+    Description: 'EventBridge Rule ARN for Close'
+    Value: !GetAtt EventBridgeRuleClose.Arn
+

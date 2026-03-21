@@ -1,0 +1,75 @@
+[
+  {
+    "ParameterKey": "ClickUpToken",
+    "ParameterValue": "pk_YOUR_CLICKUP_TOKEN"
+  },
+  {
+    "ParameterKey": "ClickUpListId",
+    "ParameterValue": "YOUR_LIST_ID"
+  },
+  {
+    "ParameterKey": "ClickUpTaskTemplateId",
+    "ParameterValue": "YOUR_TEMPLATE_ID"
+  },
+  {
+    "ParameterKey": "ClickUpTemplateTaskId",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "ClickUpWriteMode",
+    "ParameterValue": "merge"
+  },
+  {
+    "ParameterKey": "ClickUpOwnerId",
+    "ParameterValue": "YOUR_OWNER_ID"
+  },
+  {
+    "ParameterKey": "ClickUpHeaderPlanningTaskId",
+    "ParameterValue": "YOUR_HEADER_PLANNING_TASK_ID"
+  },
+  {
+    "ParameterKey": "ClickUpHeaderDailySummaryTaskId",
+    "ParameterValue": "YOUR_HEADER_DAILY_SUMMARY_TASK_ID"
+  },
+  {
+    "ParameterKey": "ClickUpHeaderFinalSummaryTaskId",
+    "ParameterValue": "YOUR_HEADER_FINAL_SUMMARY_TASK_ID"
+  },
+  {
+    "ParameterKey": "JiraBaseUrl",
+    "ParameterValue": "https://your-domain.atlassian.net"
+  },
+  {
+    "ParameterKey": "JiraEmail",
+    "ParameterValue": "your@email.com"
+  },
+  {
+    "ParameterKey": "JiraApiToken",
+    "ParameterValue": "YOUR_JIRA_API_TOKEN"
+  },
+  {
+    "ParameterKey": "JiraDevFrontendBoardId",
+    "ParameterValue": "32"
+  },
+  {
+    "ParameterKey": "JiraDevBackendBoardId",
+    "ParameterValue": "31"
+  },
+  {
+    "ParameterKey": "JiraQaBoardId",
+    "ParameterValue": "168"
+  },
+  {
+    "ParameterKey": "JiraExcludeUser",
+    "ParameterValue": "user-to-exclude@example.com"
+  },
+  {
+    "ParameterKey": "LowLoadMinHours",
+    "ParameterValue": "6"
+  },
+  {
+    "ParameterKey": "LowLoadMentionUsers",
+    "ParameterValue": "email1@example.com,email2@example.com"
+  }
+]
+
