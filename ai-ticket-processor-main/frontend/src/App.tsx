@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, Fragment } from 'react';
 import { supabase } from './lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Eye, CheckCircle, XCircle, AlertCircle, Loader2, Search, Edit, Trash2, X, LogOut } from 'lucide-react';
+import { Plus, Eye, CheckCircle, XCircle, AlertCircle, Loader2, Search, Edit, Trash2, X, LogOut, Users } from 'lucide-react';
 import ThemeToggle from './components/ThemeToggle';
 import { useAuth } from './contexts/AuthContext';
 import LoginRegister from './components/LoginRegister';
+import AdminUsers from './components/AdminUsers';
 
 type Ticket = {
   id: string;
@@ -55,6 +56,7 @@ export default function App() {
   const [tourStepIndex, setTourStepIndex] = useState(0);
   const [highlightedElement, setHighlightedElement] = useState<HTMLElement | null>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [adminView, setAdminView] = useState(false);
   const itemsPerPage = 9; // 3x3 grid
   const currentPageRef = useRef(currentPage);
   const headerRef = useRef<HTMLElement>(null);
@@ -312,7 +314,8 @@ export default function App() {
   }
 
   const isCliente = profile?.role === 'cliente';
-  const isAgente = profile?.role === 'agente';
+  const isAgente = profile?.role === 'agente' || profile?.role === 'administrador';
+  const isAdministrador = profile?.role === 'administrador';
 
   const filteredTickets = tickets.filter(ticket =>
     ticket.titulo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -345,8 +348,20 @@ export default function App() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {isAdministrador && (
+              <button
+                onClick={() => setAdminView(!adminView)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  adminView ? 'bg-white/30 text-white' : 'bg-white/10 hover:bg-white/20 text-primary-100'
+                }`}
+                title={adminView ? 'Ver tickets' : 'Gestión de usuarios'}
+              >
+                <Users className="w-4 h-4 inline mr-1.5 -mt-0.5" />
+                {adminView ? 'Tickets' : 'Usuarios'}
+              </button>
+            )}
             <span className="text-sm text-primary-100">
-              {profile?.role === 'agente' ? 'Agente' : 'Cliente'}
+              {profile?.role === 'administrador' ? 'Administrador' : profile?.role === 'agente' ? 'Agente' : 'Cliente'}
             </span>
             <button
               onClick={() => signOut()}
@@ -360,6 +375,10 @@ export default function App() {
           </div>
         </motion.header>
 
+        {adminView && isAdministrador ? (
+          <AdminUsers />
+        ) : (
+        <Fragment>
         {isCliente && (
         <motion.section
           initial={{ opacity: 0, y: 20 }}
@@ -512,6 +531,8 @@ export default function App() {
             )}
           </div>
         </motion.section>
+        </Fragment>
+        )}
 
         {/* Modal para detalles de ticket */}
         <AnimatePresence>

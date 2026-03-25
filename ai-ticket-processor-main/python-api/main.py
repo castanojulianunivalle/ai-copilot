@@ -1,15 +1,19 @@
 """
 Mesa de Ayuda - Semestre 1
 Backend FastAPI con clasificación por reglas (palabras clave).
-HU-01: Auth con roles | HU-02/03/04: CRUD y clasificación.
+HU-01: Auth con roles | HU-02/03/04: CRUD y clasificación | Admin: gestión de usuarios.
 """
+import json
 import logging
 import os
 import re
+import time
 from typing import Optional, Tuple
 
+import httpx
 import jwt
 from dotenv import load_dotenv
+from jwcrypto import jwk, jws
 from fastapi import FastAPI, HTTPException, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -43,6 +47,10 @@ class TicketUpdateIn(BaseModel):
     titulo: Optional[str] = None
     description: Optional[str] = None
     estado: Optional[str] = None
+
+
+class RoleUpdateIn(BaseModel):
+    role: str
 
 
 def get_supabase() -> Optional[Client]:
@@ -81,8 +89,36 @@ def classify_with_rules(text: str) -> str:
     return category
 
 
+# Cache para JWKS (Supabase usa ECC/ES256 desde 2024+)
+_JWKS_CACHE: Optional[jwk.JWKSet] = None
+_JWKS_CACHE_TIME = 0.0
+_JWKS_CACHE_TTL = 3600  # 1 hora
+
+
+def _get_jwks() -> jwk.JWKSet:
+    """Obtiene JWKS de Supabase (tokens ECC/ES256)."""
+    global _JWKS_CACHE, _JWKS_CACHE_TIME
+    url = (os.getenv("SUPABASE_URL") or "").strip().rstrip("/")
+    if not url:
+        raise HTTPException(status_code=503, detail="SUPABASE_URL no configurado")
+    now = time.time()
+    if _JWKS_CACHE is not None and (now - _JWKS_CACHE_TIME) < _JWKS_CACHE_TTL:
+        return _JWKS_CACHE
+    jwks_url = f"{url}/auth/v1/.well-known/jwks.json"
+    try:
+        with httpx.Client(timeout=10) as client:
+            resp = client.get(jwks_url)
+            resp.raise_for_status()
+            _JWKS_CACHE = jwk.JWKSet.from_json(resp.text)
+            _JWKS_CACHE_TIME = now
+            return _JWKS_CACHE
+    except Exception as e:
+        logger.error("Error al obtener JWKS: %s", e)
+        raise HTTPException(status_code=503, detail="No se pudo obtener claves de verificación JWT")
+
+
 def _verify_token(authorization: Optional[str] = Header(None)) -> Tuple[str, str]:
-    """Verifica JWT de Supabase y retorna (user_id, role)."""
+    """Verifica JWT de Supabase (ES256/JWKS o HS256 legacy) y retorna (user_id, role)."""
     skip = os.getenv("SKIP_AUTH", "").lower() in ("1", "true")
     if skip:
         return ("dev-user", "cliente")
@@ -91,18 +127,31 @@ def _verify_token(authorization: Optional[str] = Header(None)) -> Tuple[str, str
         raise HTTPException(status_code=401, detail="Authorization Bearer requerido")
 
     token = authorization.replace("Bearer ", "").strip()
-    secret = os.getenv("SUPABASE_JWT_SECRET")
-    if not secret:
-        raise HTTPException(status_code=503, detail="Auth no configurado (SUPABASE_JWT_SECRET)")
+    payload = None
 
+    # 1. Intentar verificación con JWKS (ES256 - tokens actuales de Supabase)
     try:
-        payload = jwt.decode(token, secret, algorithms=["HS256"])
-        user_id = payload.get("sub")
-        if not user_id:
+        jwks = _get_jwks()
+        jwt_obj = jws.JWS()
+        jwt_obj.deserialize(token, key=jwks)  # key=jwks verifica la firma
+        payload = json.loads(jwt_obj.payload)
+    except Exception as e:
+        # 2. Fallback: Legacy HS256 (tokens antiguos o anon/service_role)
+        secret = os.getenv("SUPABASE_JWT_SECRET")
+        if secret:
+            try:
+                payload = jwt.decode(token, secret, algorithms=["HS256"])
+            except jwt.ExpiredSignatureError:
+                logger.warning("JWT expirado")
+                raise HTTPException(status_code=401, detail="Token expirado")
+            except jwt.InvalidTokenError:
+                pass
+        if payload is None:
+            logger.warning("JWT inválido: %s", str(e))
             raise HTTPException(status_code=401, detail="Token inválido")
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Token expirado")
-    except jwt.InvalidTokenError:
+
+    user_id = payload.get("sub")
+    if not user_id:
         raise HTTPException(status_code=401, detail="Token inválido")
 
     supabase = get_supabase()
@@ -119,6 +168,13 @@ def _verify_token(authorization: Optional[str] = Header(None)) -> Tuple[str, str
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+@app.get("/me", response_model=dict)
+def get_me(auth: Tuple[str, str] = Depends(_verify_token)):
+    """Devuelve el perfil del usuario actual (id, role). Usa service_role, evita problemas de RLS en el cliente."""
+    user_id, role = auth
+    return {"id": user_id, "role": role}
 
 
 @app.post("/create-ticket", response_model=dict)
@@ -195,9 +251,9 @@ def update_ticket(ticket_id: str, ticket: TicketUpdateIn, auth: Tuple[str, str] 
 
 @app.patch("/tickets/{ticket_id}/estado", response_model=dict)
 def update_estado(ticket_id: str, estado: str, auth: Tuple[str, str] = Depends(_verify_token)):
-    """Endpoint rápido para que el agente cambie el estado (Abierto/Cerrado)."""
+    """Endpoint rápido para que el agente o administrador cambie el estado (Abierto/Cerrado)."""
     _, role = auth
-    if role != "agente":
+    if role not in ("agente", "administrador"):
         raise HTTPException(status_code=403, detail="Solo agentes pueden cambiar el estado")
     if estado not in ALLOWED_ESTADOS:
         raise HTTPException(status_code=400, detail="estado debe ser Abierto o Cerrado")
@@ -231,3 +287,82 @@ def delete_ticket(ticket_id: str, auth: Tuple[str, str] = Depends(_verify_token)
 
     supabase.table("tickets").delete().eq("id", ticket_id).execute()
     return {"message": "Ticket eliminado", "ticket_id": ticket_id}
+
+
+# ---- Módulo de administración de usuarios ----
+ALLOWED_ROLES = {"cliente", "agente", "administrador"}
+
+
+def _fetch_auth_users() -> list:
+    """Obtiene la lista de usuarios desde Supabase Auth Admin API."""
+    url = os.getenv("SUPABASE_URL", "").rstrip("/")
+    key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+    if not url or not key:
+        raise HTTPException(status_code=500, detail="Supabase no configurado")
+    api_url = f"{url}/auth/v1/admin/users"
+    headers = {
+        "Authorization": f"Bearer {key}",
+        "apikey": key,
+    }
+    try:
+        with httpx.Client(timeout=30) as client:
+            resp = client.get(api_url, headers=headers)
+            resp.raise_for_status()
+            data = resp.json()
+            return data.get("users", [])
+    except httpx.HTTPError as e:
+        logger.error(f"Error fetching auth users: {e}")
+        raise HTTPException(status_code=502, detail="Error al obtener usuarios de Supabase Auth")
+
+
+@app.get("/admin/users", response_model=list)
+def list_admin_users(auth: Tuple[str, str] = Depends(_verify_token)):
+    """Lista todos los usuarios (email, id, role). Solo administrador."""
+    _, role = auth
+    if role != "administrador":
+        raise HTTPException(status_code=403, detail="Solo administradores pueden acceder")
+
+    users_raw = _fetch_auth_users()
+    supabase = get_supabase()
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Supabase no configurado")
+
+    profiles = supabase.table("profiles").select("id, role").execute()
+    role_map = {p["id"]: p.get("role", "cliente") for p in (profiles.data or [])}
+
+    result = []
+    for u in users_raw:
+        uid = u.get("id")
+        email = (u.get("email") or u.get("user_metadata", {}).get("email") or "")
+        result.append({
+            "id": uid,
+            "email": email,
+            "role": role_map.get(uid, "cliente"),
+        })
+    return result
+
+
+@app.patch("/admin/users/{user_id}/role", response_model=dict)
+def update_user_role(
+    user_id: str,
+    body: RoleUpdateIn,
+    auth: Tuple[str, str] = Depends(_verify_token),
+):
+    """Actualiza el rol de un usuario. Solo administrador."""
+    _, role = auth
+    if role != "administrador":
+        raise HTTPException(status_code=403, detail="Solo administradores pueden cambiar roles")
+    if body.role not in ALLOWED_ROLES:
+        raise HTTPException(status_code=400, detail=f"role debe ser uno de: {', '.join(ALLOWED_ROLES)}")
+
+    supabase = get_supabase()
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Supabase no configurado")
+
+    # Verificar que el perfil existe
+    existing = supabase.table("profiles").select("id").eq("id", user_id).execute()
+    if not existing.data or len(existing.data) == 0:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    supabase.table("profiles").update({"role": body.role}).eq("id", user_id).execute()
+    return {"user_id": user_id, "role": body.role}

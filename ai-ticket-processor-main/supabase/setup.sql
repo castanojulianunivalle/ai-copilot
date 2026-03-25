@@ -3,10 +3,10 @@
 
 create extension if not exists "pgcrypto";
 
--- Perfiles de usuario (rol: cliente | agente)
+-- Perfiles de usuario (rol: cliente | agente | administrador)
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
-  role text not null default 'cliente' check (role in ('cliente', 'agente')),
+  role text not null default 'cliente' check (role in ('cliente', 'agente', 'administrador')),
   created_at timestamptz not null default now()
 );
 
@@ -65,7 +65,7 @@ drop policy if exists "tickets_delete_policy" on public.tickets;
 -- Cliente: ve solo sus tickets, puede insertar con created_by = auth.uid()
 -- Agente: ve todos, puede actualizar cualquiera
 create policy "tickets_select" on public.tickets for select using (
-  auth.uid() in (select id from public.profiles where role = 'agente')
+  auth.uid() in (select id from public.profiles where role in ('agente', 'administrador'))
   or created_by = auth.uid()
   or created_by is null
 );
@@ -76,11 +76,11 @@ create policy "tickets_insert_cliente" on public.tickets for insert with check (
 );
 
 create policy "tickets_update" on public.tickets for update using (
-  auth.uid() in (select id from public.profiles where role = 'agente')
+  auth.uid() in (select id from public.profiles where role in ('agente', 'administrador'))
   or (created_by = auth.uid() and auth.uid() in (select id from public.profiles where role = 'cliente'))
 );
 
 create policy "tickets_delete" on public.tickets for delete using (
-  auth.uid() in (select id from public.profiles where role = 'agente')
+  auth.uid() in (select id from public.profiles where role in ('agente', 'administrador'))
   or created_by = auth.uid()
 );
