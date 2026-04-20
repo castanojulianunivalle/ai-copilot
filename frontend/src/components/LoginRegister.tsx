@@ -24,6 +24,10 @@ export default function LoginRegister({ onSignIn, onSignUp }: Props) {
       setError('Email y contraseña son requeridos');
       return;
     }
+    if (mode === 'register' && password.length < 8) {
+      setError('La contraseña debe tener mínimo 8 caracteres');
+      return;
+    }
     setLoading(true);
     try {
       const fn = mode === 'login' ? onSignIn : onSignUp;
@@ -108,7 +112,7 @@ export default function LoginRegister({ onSignIn, onSignUp }: Props) {
                 className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-gray-100"
                 autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
                 disabled={loading}
-                minLength={6}
+                minLength={8}
               />
             </div>
             {error && <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>}
