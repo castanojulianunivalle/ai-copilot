@@ -81,12 +81,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function signIn(email: string, password: string) {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return { error };
+    return { error: error ? 'Correo o contraseña incorrectos' : undefined };
   }
 
   async function signUp(email: string, password: string) {
-    const { error } = await supabase.auth.signUp({ email, password });
-    return { error };
+    const { data, error } = await supabase.auth.signUp({ email, password });
+if (error) return { error: error.message };
+    if (data.user && data.user.identities?.length === 0)
+      return { error: 'Este correo ya está registrado' };
+    return { error: undefined };
   }
 
   async function signOut() {
