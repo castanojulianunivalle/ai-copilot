@@ -21,18 +21,18 @@ Algunos artefactos combinan ambos ámbitos para mostrar el recorrido completo de
 
 ### 1. Fundamentación y Arquitectura
 
-- [Definición, Contexto y Justificación del Problema](./1.%20Definici%C3%B3n%20y%20Justificaci%C3%B3n.md)
-- [Arquitectura, Componente Inteligente y Stack Tecnológico](./2.%20Arquitectura%20y%20Stack.md)
+- [Definición, Contexto y Justificación del Problema](./1.definicion_justificacion.md)
+- [Arquitectura, Componente Inteligente y Stack Tecnológico](./2.arquitectura_stack.md)
 
 ### 2. Modelado de Procesos
 
-- [Modelado del Proceso (SBPMN)](./3.%20Modelado%20de%20Procesos.md)
+- [Modelado del Proceso (SBPMN)](./3.modelado_de_procesos.md)
 
 ### 3. Gestión y Configuración del Proyecto
 
-- [Configuración de Entorno, Jira (Scrum) y Repositorio GitHub](./4.%20Configuraci%C3%B3n%20Herramientas.md)
+- [Configuración de Entorno, Jira (Scrum) y Repositorio GitHub](./4.configuracion_herramientas.md)
 
 ### 4. Requisitos y Planeación Ágil
 
-- [Product Backlog e Historias de Usuario](./5.%20Backlog%20e%20Historias.md)
-- [Release Plan y Evidencia de Prácticas Ágiles](./6.%20Release%20Plan%20y%20Agilismo.md)
+- [Product Backlog e Historias de Usuario](./5.backlog_historias.md)
+- [Release Plan y Evidencia de Prácticas Ágiles](./6.release_plan_agilismo.md)
