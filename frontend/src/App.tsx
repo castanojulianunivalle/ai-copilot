@@ -303,11 +303,11 @@ export default function App() {
       <LoginRegister
         onSignIn={async (email, password) => {
           const { error } = await signIn(email, password);
-          return { error };
+          return { error: error?.message };
         }}
         onSignUp={async (email, password) => {
           const { error } = await signUp(email, password);
-          return { error };
+          return { error: error?.message };
         }}
       />
     );
