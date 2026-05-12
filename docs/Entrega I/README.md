@@ -17,6 +17,18 @@ Algunos artefactos combinan ambos ámbitos para mostrar el recorrido completo de
 
 ---
 
+## Significado del logo
+
+El logo de AI Support Co-Pilot representa la **Mesa de Ayuda** y el soporte técnico mediante un **auricular con micrófono**, símbolo universal de atención al cliente y asistencia técnica. El degradado azul evoca confianza y tecnología. En conjunto, transmite comunicación, soporte y profesionalismo.
+
+| Elemento | Significado |
+|----------|-------------|
+| Auricular | Atención al cliente, soporte técnico, escucha activa |
+| Micrófono | Comunicación bidireccional, conversación con el usuario |
+| Degradado azul | Confianza, tecnología y claridad |
+
+---
+
 ## Artefactos solicitados
 
 ### 1. Fundamentación y Arquitectura

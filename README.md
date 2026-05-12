@@ -2,6 +2,8 @@
 
 Sistema de gestión de tickets de soporte con arquitectura evolutiva en tres semestres.
 
+> **Logo:** Auricular con micrófono — símbolo de soporte técnico y atención al cliente. Ver [docs/Entrega I/README.md](./docs/Entrega%20I/README.md#significado-del-logo) para más detalle.
+
 ---
 
 ## Alcance Semestre I (Entrega actual)
