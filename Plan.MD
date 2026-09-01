@@ -14,29 +14,32 @@ Sprint 0: Kickoff, definición de entorno, repositorio, Jira y documentación in
 Sprint 1: Configuración de Supabase (Tablas, RLS), Setup de FastAPI + React e implementación de Auth y Perfiles de Usuario.
 Sprint 2: Desarrollo del panel de creación y listado de tickets para el Cliente.
 Sprint 3: Dashboard del Agente y motor de reglas de clasificación básico (Python if/else).
-📊 SEMESTRE 2: Automatización de Flujos y Analítica (Sin IA)
-Fase: Integración de Servicios y Preparación de Datos.
-Objetivo: Conectar el sistema con flujos externos y generar visibilidad sobre el rendimiento del soporte.
+📊 SEMESTRE 2: Componente Inteligente (Con IA)
+Fase: Datos, NLP y Validación Científica.
+Objetivo: Construir el dataset base, inyectar el LLM (Llama 3.1) para clasificación y análisis de sentimiento, y medir su rendimiento frente al motor de reglas del Semestre 1.
+Calendario Trabajo Integrador 2 — los tres sprints cierran exactamente en los eventos de sustentación: Evento 1 (semana 3) 18 sep · Evento 2 (semana 6) 8 oct · Evento 3 (semana 9) 29 oct.
 Historias de Usuario (HU) Refinadas
-HU-05 (Notificaciones Externas): Como agente, quiero que el sistema dispare un flujo en n8n para enviarme un correo cuando se cree un ticket de alta prioridad.
-HU-06 (Real-time Updates): Como agente, quiero ver los nuevos tickets aparecer en mi pantalla sin refrescar la página para atenderlos de inmediato.
-HU-07 (Dashboard Analítico): Como administrador, quiero visualizar métricas de tickets resueltos vs. pendientes para medir la eficiencia del equipo.
+HU-08 (Dataset Histórico): Como investigador, quiero un log histórico etiquetado de tickets y la línea base del motor de reglas medida, para poder evaluar la IA contra un referente.
+HU-06 (Clasificación con LLM): Como sistema, quiero usar un modelo de lenguaje para categorizar tickets complejos que el motor de reglas no identifica.
+HU-09 (Evaluación de Modelos): Como investigador, quiero comparar la IA contra el motor de reglas con matriz de confusión, F1-Score y recall para sustentar los resultados.
 Plan de Sprints (3 sprints x 3 semanas = 9 semanas)
-Sprint 4: Configuración de Webhooks en FastAPI, integración con n8n (Email/Telegram) e implementación de Supabase Realtime en el Dashboard.
-Sprint 5: Creación de vistas de reportes y gráficas estadísticas (Recharts) y armado de Dataset histórico.
-Sprint 6: Ingeniería de Datos: log histórico de tickets para entrenamiento y validación futura.
-🧠 SEMESTRE 3: Inteligencia Artificial y Evaluación (Con IA)
-Fase: Implementación de NLP y Validación Científica.
-Objetivo: Inyectar el LLM (Llama 3.1) para clasificación, análisis de sentimiento y generar el artículo de grado.
+Sprint 4 — Dataset IA (2026-08-31 → 2026-09-18, cierra en Evento 1): diseño del esquema del dataset, script de exportación/ETL, metadatos versionados en el repo y medición de la línea base de reglas.
+Sprint 5 — LLM Clasificación (2026-09-21 → 2026-10-08, cierra en Evento 2): integración de la API de Llama-3.1 (Hugging Face Router o vLLM), prompt engineering, parsing JSON y persistencia de entidades/sentimiento.
+Sprint 6 — Evaluación IA (2026-10-12 → 2026-10-29, cierra en Evento 3): conjunto de evaluación etiquetado, script de métricas, matriz de confusión y exportación de gráficas versionadas.
+
+⚙️ SEMESTRE 3: Automatización de Flujos y Analítica (Sin IA)
+Fase: Integración de Servicios y Visibilidad Operativa.
+Objetivo: Conectar el sistema con flujos externos y exponer la analítica del soporte, ya enriquecida con las salidas de la IA del Semestre 2.
 Historias de Usuario (HU) Refinadas
-HU-08 (Clasificación con LLM): Como sistema, quiero usar un modelo de lenguaje para categorizar tickets complejos que el motor de reglas no identifica.
-HU-09 (Análisis de Sentimiento): Como agente, quiero que los tickets se prioricen automáticamente si el LLM detecta un tono "Frustrado" o "Urgente" en el texto del cliente.
-HU-10 (Asistente de Respuesta): Como agente, quiero que la IA me sugiera una respuesta basada en la base de conocimientos para reducir mi tiempo de redacción.
-Plan de Sprints (3 sprints x 3 semanas = 9 semanas)
-Sprint 7: Integración de la API de Llama-3.1 (Hugging Face Router o vLLM) e implementación de Prompt Engineering para extracción de entidades y análisis de sentimiento.
-Sprint 8: Evaluación de Modelos: comparación matemática del accuracy de la IA vs. motor de reglas del Semestre 1 (Matriz de Confusión).
-Sprint 9: Redacción del artículo final, conclusiones de rendimiento y preparación de la sustentación.
+HU-05 (Notificaciones Externas): Como agente, quiero que el sistema dispare un flujo en n8n para notificarme cuando se cree un ticket de alta prioridad.
+HU-06b (Real-time Updates): Como agente, quiero ver los nuevos tickets aparecer en mi pantalla sin refrescar la página para atenderlos de inmediato.
+HU-07 (Dashboard Analítico): Como administrador, quiero visualizar métricas de tickets resueltos vs. pendientes —y el desempeño de la clasificación IA— para medir la eficiencia del equipo.
+Plan de Sprints
+Sprint 7 — n8n y Realtime (2026-11-02 → 2026-11-20): webhooks en FastAPI, flujo n8n (Email/Telegram), Supabase Realtime en el dashboard y prueba end-to-end.
+Sprint 8 — Reportes (2026-11-23 → 2026-12-11): endpoints agregados/vistas SQL, componentes de gráficas (Recharts) e integración en el dashboard.
+Sprint 9 — Artículo y Sustentación (pendiente de crear en Jira): redacción del artículo final, conclusiones de rendimiento y preparación de la sustentación.
+
 📝 Resumen de Entregables Técnicos
-Semestre 1: Repositorio con App Web + Supabase + CRUD funcional.
-Semestre 2: Flujos de n8n activos + Dashboard con analítica descriptiva.
-Semestre 3: Implementación de IA + Informe de Métricas (F1-Score, Recall) + Artículo de Investigación.
+Semestre 1: Repositorio con App Web + Supabase + CRUD funcional + motor de reglas (línea base).
+Semestre 2: Dataset histórico + Implementación de IA (Llama-3.1) + Informe de Métricas (F1-Score, Recall, matriz de confusión).
+Semestre 3: Flujos de n8n activos + Realtime + Dashboard con analítica descriptiva + Artículo de Investigación.
