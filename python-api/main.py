@@ -15,7 +15,7 @@ import httpx
 import jwt
 from dotenv import load_dotenv
 from jwcrypto import jwk, jws
-from fastapi import FastAPI, HTTPException, Depends, Header
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from supabase import create_client, Client
@@ -24,6 +24,7 @@ from ai.classifier import MOTOR_LLM, MOTOR_REGLAS, ResultadoClasificacion, clasi
 # Reexportado: el motor de reglas vive en ai.reglas para que el script de
 # evaluacion (Sprint 6) lo importe sin arrastrar FastAPI ni Supabase.
 from ai.reglas import classify_with_rules
+from notificaciones import notificar_ticket
 
 logging.basicConfig(
     level=logging.INFO,
@@ -204,7 +205,11 @@ def get_me(auth: Tuple[str, str] = Depends(_verify_token)):
 
 
 @app.post("/create-ticket", response_model=dict)
-def create_ticket(ticket: TicketIn, auth: Tuple[str, str] = Depends(_verify_token)):
+def create_ticket(
+    ticket: TicketIn,
+    tareas: BackgroundTasks,
+    auth: Tuple[str, str] = Depends(_verify_token),
+):
     user_id, role = auth
     if role != "cliente":
         raise HTTPException(status_code=403, detail="Solo clientes pueden crear tickets")
@@ -238,7 +243,7 @@ def create_ticket(ticket: TicketIn, auth: Tuple[str, str] = Depends(_verify_toke
     _registrar_clasificacion(supabase, ticket_id, texto, resultado)
 
     clasificacion = resultado.clasificacion
-    return {
+    respuesta = {
         "ticket_id": ticket_id,
         "category": clasificacion.categoria,
         "estado": "Abierto",
@@ -248,6 +253,12 @@ def create_ticket(ticket: TicketIn, auth: Tuple[str, str] = Depends(_verify_toke
         "clasificado_por": resultado.motor,
         "requiere_revision": resultado.uso_ia and clasificacion.requiere_revision,
     }
+
+    # HU-05: el aviso sale despues de responderle al cliente. Un n8n caido o
+    # lento no puede retrasar la creacion de un ticket.
+    tareas.add_task(notificar_ticket, {**respuesta, "titulo": ticket.titulo,
+                                       "description": ticket.description})
+    return respuesta
 
 
 @app.put("/tickets/{ticket_id}", response_model=dict)
