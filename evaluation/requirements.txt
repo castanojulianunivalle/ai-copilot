@@ -1,0 +1,12 @@
+# Dependencias SOLO de la evaluacion (Sprint 6). Deliberadamente fuera de
+# python-api/requirements.txt: la imagen de la API no tiene por que cargar
+# matplotlib para servir tickets.
+#
+# metricas.py y evaluate.py no necesitan nada de esto; corren con la libreria
+# estandar. Esto es unicamente para generar las figuras.
+matplotlib>=3.8
+
+# Opcional: solo para verificar_contra_sklearn.py, que contrasta la
+# implementacion propia de las metricas contra una referencia establecida.
+# scikit-learn>=1.4
+# scipy>=1.11
