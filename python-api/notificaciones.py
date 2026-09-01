@@ -46,6 +46,24 @@ def _configuracion() -> tuple[str | None, set[str], str | None, float]:
     return url, prioridades, secreto, timeout
 
 
+def serializar(payload: dict[str, Any]) -> bytes:
+    """Serializa el payload de forma que n8n pueda reproducir byte a byte.
+
+    n8n recibe el cuerpo ya parseado y, para validar la firma, tiene que volver
+    a serializarlo. `json.dumps` por defecto pone un espacio despues de cada
+    coma y de cada dos puntos; `JSON.stringify` de JavaScript no pone ninguno.
+    Con los valores por defecto las dos cadenas difieren y la firma NUNCA
+    coincide. `separators` sin espacios iguala el formato, y `sort_keys` hace
+    que el orden no dependa de en que orden se construyo el diccionario.
+
+    Del lado de n8n hay que reproducirlo con la forma de replacer-array:
+        JSON.stringify(obj, Object.keys(obj).sort())
+    """
+    return json.dumps(
+        payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    ).encode("utf-8")
+
+
 def _firmar(cuerpo: bytes, secreto: str) -> str:
     """HMAC-SHA256 del cuerpo exacto que se envia.
 
@@ -97,7 +115,7 @@ def notificar_ticket(ticket: dict[str, Any]) -> None:
         return
 
     payload = construir_payload(ticket)
-    cuerpo = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+    cuerpo = serializar(payload)
     cabeceras = {"Content-Type": "application/json; charset=utf-8"}
     if secreto:
         cabeceras["X-Signature-256"] = f"sha256={_firmar(cuerpo, secreto)}"
