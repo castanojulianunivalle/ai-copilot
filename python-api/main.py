@@ -1,7 +1,8 @@
 """
-Mesa de Ayuda - Semestre 1
-Backend FastAPI con clasificación por reglas (palabras clave).
+Mesa de Ayuda - Support Co-Pilot
+Backend FastAPI. Clasificación por reglas (Semestre 1) + LLM (Semestre 2).
 HU-01: Auth con roles | HU-02/03/04: CRUD y clasificación | Admin: gestión de usuarios.
+HU-06: Clasificación con LLM | HU-09: Sentimiento y priorización automática.
 """
 import json
 import logging
@@ -18,6 +19,8 @@ from fastapi import FastAPI, HTTPException, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from supabase import create_client, Client
+
+from ai.classifier import MOTOR_LLM, MOTOR_REGLAS, ResultadoClasificacion, clasificar
 
 logging.basicConfig(
     level=logging.INFO,
@@ -87,6 +90,54 @@ def classify_with_rules(text: str) -> str:
 
     logger.info(f"Classification: {category} (reglas)")
     return category
+
+
+def _campos_clasificacion(resultado: ResultadoClasificacion) -> dict:
+    """Traduce el resultado a las columnas desnormalizadas de `tickets`."""
+    c = resultado.clasificacion
+    return {
+        "category": c.categoria,
+        "sentimiento": c.sentimiento,
+        "prioridad": c.prioridad,
+        # El motor de reglas no estima confianza: dejarla en NULL evita que las
+        # estadisticas de confianza del articulo mezclen ambos motores.
+        "confianza_ia": c.confianza if resultado.uso_ia else None,
+        "clasificado_por": resultado.motor,
+    }
+
+
+def _registrar_clasificacion(supabase, ticket_id: str, texto: str, resultado: ResultadoClasificacion) -> None:
+    """Deja constancia en classification_log de lo que predijo cada motor.
+
+    El motor de reglas se registra SIEMPRE, incluso cuando gana el LLM. Es lo
+    que permite que el Sprint 6 compare ambos motores sobre exactamente los
+    mismos tickets en lugar de sobre dos muestras distintas.
+    """
+    filas = [{
+        "ticket_id": ticket_id,
+        "motor": MOTOR_REGLAS,
+        "categoria": classify_with_rules(texto),
+        "modelo": "classify_with_rules@sem1",
+    }]
+    if resultado.uso_ia:
+        c = resultado.clasificacion
+        filas.append({
+            "ticket_id": ticket_id,
+            "motor": MOTOR_LLM,
+            "categoria": c.categoria,
+            "sentimiento": c.sentimiento,
+            "prioridad": c.prioridad,
+            "confianza": c.confianza,
+            "modelo": resultado.modelo,
+            "latencia_ms": resultado.latencia_ms,
+        })
+
+    try:
+        supabase.table("classification_log").upsert(filas, on_conflict="ticket_id,motor").execute()
+    except Exception as exc:  # noqa: BLE001
+        # El log alimenta la investigacion, no el producto. Si falla, el ticket
+        # ya esta creado y el cliente no tiene por que enterarse.
+        logger.error("No se pudo registrar la clasificacion del ticket %s: %s", ticket_id, exc)
 
 
 # Cache para JWKS (Supabase usa ECC/ES256 desde 2024+)
@@ -190,14 +241,18 @@ def create_ticket(ticket: TicketIn, auth: Tuple[str, str] = Depends(_verify_toke
     if not supabase:
         raise HTTPException(status_code=500, detail="Supabase no configurado")
 
-    category = classify_with_rules(ticket.titulo + " " + ticket.description)
+    texto = f"{ticket.titulo} {ticket.description}"
+    # Clasificacion sincrona: la respuesta lleva ya la categoria de la IA, y el
+    # timeout + fallback a reglas acotan el peor caso. Cuando Realtime entre en
+    # el Sprint 7, esto puede pasar a BackgroundTasks y refrescarse solo.
+    resultado = clasificar(texto, classify_with_rules)
 
     ticket_data = {
         "titulo": ticket.titulo,
         "description": ticket.description,
-        "category": category,
         "estado": "Abierto",
         "created_by": user_id if user_id != "dev-user" else None,
+        **_campos_clasificacion(resultado),
     }
     result = supabase.table("tickets").insert(ticket_data).execute()
 
@@ -205,10 +260,18 @@ def create_ticket(ticket: TicketIn, auth: Tuple[str, str] = Depends(_verify_toke
         raise HTTPException(status_code=500, detail="Error al crear ticket")
 
     ticket_id = result.data[0]["id"]
+    _registrar_clasificacion(supabase, ticket_id, texto, resultado)
+
+    clasificacion = resultado.clasificacion
     return {
         "ticket_id": ticket_id,
-        "category": category,
+        "category": clasificacion.categoria,
         "estado": "Abierto",
+        "sentimiento": clasificacion.sentimiento,
+        "prioridad": clasificacion.prioridad,
+        "confianza_ia": clasificacion.confianza if resultado.uso_ia else None,
+        "clasificado_por": resultado.motor,
+        "requiere_revision": resultado.uso_ia and clasificacion.requiere_revision,
     }
 
 
@@ -231,11 +294,20 @@ def update_ticket(ticket_id: str, ticket: TicketUpdateIn, auth: Tuple[str, str] 
         pass  # agente puede enviar solo estado vía PATCH
 
     update_data = {}
+    resultado = None
+    texto = ""
     if ticket.titulo is not None:
         update_data["titulo"] = ticket.titulo
     if ticket.description is not None:
         update_data["description"] = ticket.description
-        update_data["category"] = classify_with_rules(ticket.description)
+        # Se reclasifica con titulo + descripcion, igual que en el alta. Antes
+        # se usaba solo la descripcion, lo que daba al motor una entrada
+        # distinta segun el ticket viniera de un POST o de un PUT y ensuciaba
+        # la comparacion entre motores.
+        titulo = ticket.titulo if ticket.titulo is not None else existing.data[0].get("titulo", "")
+        texto = f"{titulo} {ticket.description}"
+        resultado = clasificar(texto, classify_with_rules)
+        update_data.update(_campos_clasificacion(resultado))
     if ticket.estado is not None:
         if ticket.estado not in ALLOWED_ESTADOS:
             raise HTTPException(status_code=400, detail="estado debe ser Abierto o Cerrado")
@@ -245,6 +317,9 @@ def update_ticket(ticket_id: str, ticket: TicketUpdateIn, auth: Tuple[str, str] 
         raise HTTPException(status_code=400, detail="No hay campos para actualizar")
 
     supabase.table("tickets").update(update_data).eq("id", ticket_id).execute()
+
+    if resultado is not None:
+        _registrar_clasificacion(supabase, ticket_id, texto, resultado)
 
     return {"message": "Ticket actualizado", "ticket_id": ticket_id}
 
