@@ -350,6 +350,66 @@ def delete_ticket(ticket_id: str, auth: Tuple[str, str] = Depends(_verify_token)
     return {"message": "Ticket eliminado", "ticket_id": ticket_id}
 
 
+# ---- HU-07: Dashboard analítico (Sprint 8) ----
+# Las agregaciones viven en vistas SQL (ver la migración de reportes). La API
+# solo las expone: mantener una segunda definición de cada métrica en Python
+# garantizaría que las dos se separen con el tiempo.
+_VISTAS_REPORTE = {
+    "resumen": "reportes_resumen",
+    "por-categoria": "reportes_por_categoria",
+    "serie": "reportes_serie_diaria",
+    "por-sentimiento": "reportes_por_sentimiento",
+    "ia-vs-reglas": "reportes_ia_vs_reglas",
+}
+
+# Un cliente ve solo sus propios tickets; darle las métricas agregadas de todos
+# sería una fuga de información sobre el volumen y los problemas de terceros.
+_ROLES_REPORTES = {"agente", "administrador"}
+
+
+def _leer_vista(nombre: str, limite: int | None = None) -> list:
+    supabase = get_supabase()
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Supabase no configurado")
+    consulta = supabase.table(nombre).select("*")
+    if limite:
+        consulta = consulta.limit(limite)
+    try:
+        return consulta.execute().data or []
+    except Exception as exc:  # noqa: BLE001
+        # El fallo típico es que las migraciones de reportes no se aplicaron.
+        logger.error("No se pudo leer la vista %s: %s", nombre, exc)
+        raise HTTPException(
+            status_code=503,
+            detail=f"La vista '{nombre}' no está disponible. ¿Se aplicaron las migraciones de reportes?",
+        ) from exc
+
+
+@app.get("/reports/{seccion}", response_model=dict)
+def get_report(seccion: str, auth: Tuple[str, str] = Depends(_verify_token)):
+    """Métricas agregadas para el dashboard analítico (HU-07)."""
+    _, role = auth
+    if role not in _ROLES_REPORTES:
+        raise HTTPException(status_code=403, detail="Solo agentes y administradores ven reportes")
+
+    vista = _VISTAS_REPORTE.get(seccion)
+    if not vista:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Sección desconocida. Disponibles: {', '.join(sorted(_VISTAS_REPORTE))}",
+        )
+
+    # ia-vs-reglas es un producto cruzado de categorías: se acota para que una
+    # base grande no devuelva cientos de combinaciones con conteo 1.
+    filas = _leer_vista(vista, limite=40 if seccion == "ia-vs-reglas" else None)
+
+    # `resumen` es una vista de una sola fila; se devuelve como objeto para que
+    # el frontend no tenga que hacer datos[0] en un caso y datos en los demás.
+    if seccion == "resumen":
+        return {"seccion": seccion, "datos": filas[0] if filas else {}}
+    return {"seccion": seccion, "datos": filas}
+
+
 # ---- Módulo de administración de usuarios ----
 ALLOWED_ROLES = {"cliente", "agente", "administrador"}
 
