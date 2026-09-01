@@ -177,6 +177,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--out", type=Path, default=SALIDA)
     parser.add_argument("--llm", action="store_true", help="Consulta el LLM por lo que falte en cache")
     parser.add_argument("--forzar", action="store_true", help="Ignora la cache y vuelve a consultar")
+    parser.add_argument("--graficas", action="store_true", help="Genera las figuras (requiere matplotlib)")
     args = parser.parse_args(argv)
 
     filas = cargar_fixture(args.fixture)
@@ -278,6 +279,27 @@ def main(argv: list[str] | None = None) -> int:
             f"p95 {informe['latencia_ms']['p95']} ms · máx {informe['latencia_ms']['max']} ms.",
         ]
     (args.out / "informe.md").write_text("\n".join(partes) + "\n", encoding="utf-8")
+
+    if args.graficas:
+        from graficas import MatplotlibAusente, comparativa_f1, matriz_confusion
+
+        try:
+            generadas = matriz_confusion(
+                res_reglas, "Matriz de confusión — motor de reglas", args.out / "matriz_reglas"
+            )
+            if res_llm is not None:
+                generadas += matriz_confusion(
+                    res_llm, "Matriz de confusión — LLM", args.out / "matriz_llm"
+                )
+                generadas += comparativa_f1(
+                    evaluar([f["categoria_real"] for f in comparables],
+                            [classify_with_rules(f["texto"]) for f in comparables], etiquetas),
+                    res_llm, args.out / "comparativa_f1",
+                )
+            logger.info("Figuras: %s", ", ".join(p.name for p in generadas))
+        except MatplotlibAusente as exc:
+            # No es un error fatal: las metricas ya estan escritas.
+            logger.warning("%s", exc)
 
     logger.info("Resultados en %s", args.out)
     return 0
