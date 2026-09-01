@@ -14,6 +14,12 @@ type Ticket = {
   description: string;
   category: string | null;
   estado: string;
+  // Componente inteligente (Sprint 5). Opcionales: los tickets creados antes de
+  // la migracion no los tienen, y la UI debe seguir pintandolos.
+  sentimiento?: string | null;
+  prioridad?: string | null;
+  confianza_ia?: number | null;
+  clasificado_por?: string | null;
 };
 
 const estadoColor = (estado: string) => {
@@ -159,6 +165,53 @@ export default function App() {
   useEffect(() => {
     if (session) fetchTickets();
     else setTickets([]);
+  }, [session]);
+
+  // HU-06b (Sprint 7): los tickets nuevos aparecen sin refrescar la pagina.
+  //
+  // Se aplica el cambio que trae el evento en lugar de volver a pedir la lista
+  // entera: con el agente mirando la bandeja, un refetch por cada ticket que
+  // entra es una peticion completa por evento y ademas hace saltar el scroll.
+  //
+  // RLS sigue aplicando sobre el canal, asi que un cliente solo recibe eventos
+  // de sus propios tickets y no hace falta filtrar por rol aqui.
+  useEffect(() => {
+    if (!session) return;
+
+    const canal = supabase
+      .channel('tickets-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'tickets' },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            const nuevo = payload.new as Ticket;
+            setTickets((previos) =>
+              // El propio creador ya lo tiene en la lista por el POST: sin esta
+              // guarda se duplicaria la tarjeta.
+              previos.some((t) => t.id === nuevo.id) ? previos : [nuevo, ...previos]
+            );
+            if (nuevo.prioridad === 'Alta') {
+              addNotification('info', `Ticket prioritario: ${nuevo.titulo}`);
+            }
+          } else if (payload.eventType === 'UPDATE') {
+            const actualizado = payload.new as Ticket;
+            setTickets((previos) =>
+              previos.map((t) => (t.id === actualizado.id ? { ...t, ...actualizado } : t))
+            );
+          } else if (payload.eventType === 'DELETE') {
+            const borrado = payload.old as { id: string };
+            setTickets((previos) => previos.filter((t) => t.id !== borrado.id));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      // Sin esto, cada re-login deja un canal abierto y los eventos se aplican
+      // tantas veces como suscripciones vivas haya.
+      supabase.removeChannel(canal);
+    };
   }, [session]);
 
   const handleSubmit = async (e: React.FormEvent) => {
