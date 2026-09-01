@@ -21,6 +21,9 @@ from pydantic import BaseModel
 from supabase import create_client, Client
 
 from ai.classifier import MOTOR_LLM, MOTOR_REGLAS, ResultadoClasificacion, clasificar
+# Reexportado: el motor de reglas vive en ai.reglas para que el script de
+# evaluacion (Sprint 6) lo importe sin arrastrar FastAPI ni Supabase.
+from ai.reglas import classify_with_rules
 
 logging.basicConfig(
     level=logging.INFO,
@@ -62,34 +65,6 @@ def get_supabase() -> Optional[Client]:
     if not url or not key:
         return None
     return create_client(url, key)
-
-
-def classify_with_rules(text: str) -> str:
-    """HU-04: Clasificación por palabras clave (motor de reglas)."""
-    text_lower = (text or "").lower()
-    category = "Técnico"
-
-    category_rules = [
-        ("Facturación", ["factura", "billing", "cobro", "pago", "suscripción", "reembolso"]),
-        ("Acceso", ["login", "inicio de sesión", "contraseña", "bloqueo", "2fa", "otp"]),
-        ("Cuenta", ["perfil", "cuenta", "usuario", "registro", "alta", "baja"]),
-        ("Integraciones", ["api", "webhook", "zapier", "slack", "integración", "integraciones"]),
-        ("Rendimiento", ["lento", "latencia", "demora", "performance", "rendimiento"]),
-        ("UX/UI", ["diseño", "ui", "ux", "interfaz", "botón", "boton", "pantalla"]),
-        ("Seguridad", ["phishing", "fraude", "seguridad", "vulnerabilidad", "hack"]),
-        ("Solicitudes", ["quiero", "me gustaría", "feature", "mejorar", "solicitud"]),
-        ("Comercial", ["precio", "plan", "cotización", "ventas", "comercial"]),
-        ("Móvil", ["android", "ios", "móvil", "movil", "celular"]),
-        ("Técnico", ["error", "fallo", "bug", "no funciona", "no sirve", "crash", "internet"]),
-    ]
-
-    for name, keywords in category_rules:
-        if any(k in text_lower for k in keywords):
-            category = name
-            break
-
-    logger.info(f"Classification: {category} (reglas)")
-    return category
 
 
 def _campos_clasificacion(resultado: ResultadoClasificacion) -> dict:
