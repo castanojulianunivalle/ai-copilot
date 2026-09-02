@@ -73,10 +73,11 @@ Las figuras necesitan matplotlib: `pip install -r evaluation/requirements.txt`. 
 | F1 macro | **0,5271** |
 | F1 ponderado | 0,5271 |
 
-Dos hallazgos de la línea base que el artículo debería recoger:
+Tres hallazgos de la línea base que el artículo debería recoger:
 
-1. **El motor de reglas nunca predice `Seguridad`** (recall 0,000, columna vacía en la matriz). El `if/else` recorre las reglas en orden y `contraseña` casa con `Acceso` antes de llegar a la regla de seguridad. Un ticket de phishing se clasifica como problema de login.
+1. **El motor de reglas nunca predice `Seguridad`** (recall 0,000, columna vacía en la matriz). La causa no es solo el orden del `if/else`: **ninguno de los seis tickets de `Seguridad` contiene una sola palabra clave de esa regla** (`phishing`, `fraude`, `seguridad`, `vulnerabilidad`, `hack`). Los seis describen el incidente con palabras corrientes —«me llegó un correo con su logo pidiéndome la contraseña», «veo sesiones activas desde una ciudad en la que nunca he estado»— y cada uno se va por la primera regla que casa: tres a `Cuenta` (por `cuenta` y `usuario`), uno a `Acceso` (por `contraseña`), uno a `Técnico` por defecto al no casar con nada, y uno a `UX/UI` porque **el cotejo es por subcadena y `ui` casa dentro de `Quisiera`**. El hallazgo para el artículo es ese: el motor solo reconoce el vocabulario que se le enumeró, y la categoría más crítica es justamente la que los usuarios nunca nombran.
 2. **`Técnico` absorbe el error ajeno.** Tiene recall 0,833 pero precisión 0,250: es el *fallback*, así que recoge todo lo que ninguna palabra clave atrapó. Es exactamente el comportamiento que el desbalance de clases premiaría si se midiera solo con exactitud.
+3. **Cuatro categorías tienen precisión 1,000 con recall por debajo de 0,70.** Cuando el motor se atreve, acierta; se atreve poco. Es el perfil típico de un clasificador por palabras clave: alta especificidad, cobertura pobre.
 
 ## Validez: qué garantiza este montaje y qué no
 
