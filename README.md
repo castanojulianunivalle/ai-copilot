@@ -8,7 +8,7 @@ Sistema de gestión de tickets de soporte con arquitectura evolutiva en tres sem
 
 ## Alcance Semestre I (Entrega actual)
 
-Sistema **sin IA**: CRUD transaccional con clasificación por reglas (palabras clave) como línea base para comparación futura (Semestre 3).
+Sistema **sin IA**: CRUD transaccional con clasificación por reglas (palabras clave) como línea base para comparación con el LLM.
 
 ### ✨ Características - Semestre I
 
@@ -99,16 +99,16 @@ Ver [docs/Entrega I/README.md](./docs/Entrega%20I/README.md) para la documentaci
 ## 🧠 Clasificación - Semestre I (Motor de Reglas)
 
 - **Categorías**: Acceso, Cuenta, Facturación, Comercial, Técnico, Rendimiento, UX/UI, Seguridad, Integraciones, Móvil, Solicitudes.
-- **Motor**: Palabras clave en `classify_with_rules()` (Python if/else). Línea base para comparación con LLM en Semestre 3.
+- **Motor**: Palabras clave en `classify_with_rules()` (Python if/else). Línea base para comparación con el LLM.
 
 ---
 
 ## 📋 Roadmap (Semestres 2 y 3)
 
-| Semestre | Funcionalidad planificada |
-|----------|---------------------------|
-| **Sem 2** | n8n (webhooks, Telegram/Email), Realtime, dashboard analítico |
-| **Sem 3** | LLM (Llama-3.1) para clasificación y sentimiento, evaluación F1-Score |
+| Semestre | Sprints | Funcionalidad planificada |
+|----------|---------|---------------------------|
+| **Sem 2** | 4 · 5 · 6 | Dataset histórico + LLM (Llama-3.1) para clasificación y sentimiento + evaluación F1-Score / matriz de confusión |
+| **Sem 3** | 7 · 8 · 9 | n8n (webhooks, Telegram/Email), Realtime, dashboard analítico y artículo final |
 
 ## 🐳 Docker Compose (Recomendado)
 
