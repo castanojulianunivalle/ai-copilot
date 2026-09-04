@@ -6,6 +6,7 @@ import ThemeToggle from './components/ThemeToggle';
 import { useAuth } from './contexts/AuthContext';
 import LoginRegister from './components/LoginRegister';
 import AdminUsers from './components/AdminUsers';
+import ResetPassword from './components/ResetPassword';
 
 type Ticket = {
   id: string;
@@ -37,7 +38,16 @@ type TourStep = {
 };
 
 export default function App() {
-  const { session, profile, loading: authLoading, signIn, signUp, signOut } = useAuth();
+  const { session, profile, loading: authLoading, signIn, signUp, signOut, resetPassword } = useAuth();
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') setIsPasswordRecovery(true);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
   const [newTitulo, setNewTitulo] = useState('');
@@ -298,16 +308,32 @@ export default function App() {
     );
   }
 
+  if (isPasswordRecovery) {
+    return (
+      <ResetPassword
+        onSubmit={async (password) => {
+          const { error } = await supabase.auth.updateUser({ password });
+          if (!error) setIsPasswordRecovery(false);
+          return { error: error?.message };
+        }}
+      />
+    );
+  }
+
   if (!session) {
     return (
       <LoginRegister
         onSignIn={async (email, password) => {
           const { error } = await signIn(email, password);
-          return { error: error?.message };
+          return { error };
         }}
         onSignUp={async (email, password) => {
           const { error } = await signUp(email, password);
-          return { error: error?.message };
+          return { error };
+        }}
+        onResetPassword={async (email) => {
+          const { error } = await resetPassword(email);
+          return { error };
         }}
       />
     );
