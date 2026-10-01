@@ -1,0 +1,3 @@
+# Dependencias solo para correr las pruebas: pytest desde python-api/
+pytest>=8
+httpx>=0.27.0
