@@ -11,8 +11,8 @@ if [ ! -f "python-api/.env" ]; then
     echo "✏️  Por favor edita python-api/.env con tus credenciales reales:"
     echo "   - SUPABASE_URL"
     echo "   - SUPABASE_SERVICE_ROLE_KEY"
-    echo "   - HF_API_TOKEN"
-    echo "   - HF_MODEL (por defecto: meta-llama/Llama-3.1-8B-Instruct)"
+    echo "   - LLM_API_KEY (token de Hugging Face) con LLM_ENABLED=1"
+    echo "   - LLM_MODEL (por defecto: meta-llama/Llama-3.1-8B-Instruct)"
     exit 1
 fi
 
@@ -34,5 +34,6 @@ echo "📍 URLs una vez iniciado:"
 echo "   - Frontend: http://localhost:5200"
 echo "   - API: http://localhost:8001"
 echo "   - API Docs: http://localhost:8001/docs"
+echo "   - Estado del LLM: http://localhost:8001/health (llm_habilitado debe ser true)"
 echo ""
 docker compose up --build

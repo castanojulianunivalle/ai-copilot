@@ -10,14 +10,18 @@ if [ ! -f "python-api/.env" ]; then
     cat > python-api/.env << 'EOF'
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-HF_API_TOKEN=your-hf-api-token
-HF_MODEL=meta-llama/Llama-3.1-8B-Instruct
-LLM_API_BASE_URL=https://router.huggingface.co/v1/chat/completions
-LLM_TEMPERATURE=0.1
-LLM_MAX_TOKENS=200
-LLM_CONFIDENCE_THRESHOLD=0.6
+SUPABASE_JWT_SECRET=your-jwt-secret
 PORT=8001
 N8N_WEBHOOK_URL=
+# Clasificacion con LLM (HU-06). Sin LLM_ENABLED=1 la API clasifica solo con reglas.
+LLM_ENABLED=1
+LLM_BASE_URL=https://router.huggingface.co/v1
+LLM_API_KEY=your-hf-api-token
+LLM_MODEL=meta-llama/Llama-3.1-8B-Instruct
+LLM_TIMEOUT=20
+LLM_MAX_REINTENTOS=2
+LLM_TEMPERATURA=0
+LLM_MAX_TOKENS=300
 EOF
     echo "✅ python-api/.env creado"
 else
