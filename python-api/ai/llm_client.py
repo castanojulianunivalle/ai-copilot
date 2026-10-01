@@ -17,6 +17,7 @@ import random
 import time
 from dataclasses import dataclass
 from typing import Any
+from urllib.parse import urlsplit
 
 import httpx
 
@@ -54,10 +55,15 @@ class ConfigLLM:
 
     @classmethod
     def desde_entorno(cls) -> "ConfigLLM":
+        # Los nombres HF_* y LLM_API_BASE_URL son los que generaba setup-env.sh
+        # en el Semestre 1. Se aceptan como respaldo porque un .env creado con
+        # aquel script dejaba la key donde este cliente no la buscaba, y el LLM
+        # quedaba apagado sin que nada lo advirtiera.
+        base_url = os.getenv("LLM_BASE_URL") or os.getenv("LLM_API_BASE_URL") or "https://router.huggingface.co/v1"
         return cls(
-            base_url=os.getenv("LLM_BASE_URL", "https://router.huggingface.co/v1").rstrip("/"),
-            api_key=os.getenv("LLM_API_KEY") or None,
-            modelo=os.getenv("LLM_MODEL", "meta-llama/Llama-3.1-8B-Instruct"),
+            base_url=_normalizar_base_url(base_url),
+            api_key=os.getenv("LLM_API_KEY") or os.getenv("HF_API_TOKEN") or None,
+            modelo=os.getenv("LLM_MODEL") or os.getenv("HF_MODEL") or "meta-llama/Llama-3.1-8B-Instruct",
             timeout=float(os.getenv("LLM_TIMEOUT", "20")),
             max_reintentos=int(os.getenv("LLM_MAX_REINTENTOS", "2")),
             temperatura=float(os.getenv("LLM_TEMPERATURA", "0")),
@@ -66,6 +72,32 @@ class ConfigLLM:
             # exactamente como el Semestre 1 y no intenta salir a la red.
             habilitado=os.getenv("LLM_ENABLED", "").lower() in ("1", "true", "yes"),
         )
+
+    def estado(self) -> dict[str, Any]:
+        """Lo que /health publica del LLM. Nunca incluye la key."""
+        return {
+            "llm_habilitado": self.habilitado,
+            "modelo": self.modelo,
+            "proveedor": urlsplit(self.base_url).netloc,
+            "tiene_api_key": bool(self.api_key),
+        }
+
+    def advertencias(self) -> list[str]:
+        """Configuraciones que dejan el LLM apagado o roto sin que falle nada."""
+        avisos = []
+        if self.api_key and not self.habilitado:
+            avisos.append("Hay API key pero LLM_ENABLED no esta activo: se clasifica solo con reglas")
+        if self.habilitado and not self.api_key and "huggingface" in self.base_url:
+            avisos.append("LLM_ENABLED esta activo pero no hay LLM_API_KEY: el router respondera 401")
+        return avisos
+
+
+def _normalizar_base_url(url: str) -> str:
+    # El cliente agrega /chat/completions; si la URL ya lo trae, la ruta quedaria
+    # duplicada, el proveedor responderia 404 y todo caeria a reglas.
+    url = url.strip().rstrip("/")
+    sufijo = "/chat/completions"
+    return url[: -len(sufijo)] if url.endswith(sufijo) else url
 
 
 class ClienteLLM:

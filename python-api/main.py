@@ -21,6 +21,7 @@ from pydantic import BaseModel
 from supabase import create_client, Client
 
 from ai.classifier import MOTOR_LLM, MOTOR_REGLAS, ResultadoClasificacion, clasificar
+from ai.llm_client import ConfigLLM
 
 logging.basicConfig(
     level=logging.INFO,
@@ -29,6 +30,13 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 load_dotenv()
+
+# Que el estado del LLM quede a la vista al arrancar: si la configuracion lo
+# deja apagado, la API clasifica igual con reglas y nada mas lo delataria.
+_config_llm = ConfigLLM.desde_entorno()
+logger.info("Clasificacion con LLM: %s", _config_llm.estado())
+for _aviso in _config_llm.advertencias():
+    logger.warning(_aviso)
 
 app = FastAPI(title="Mesa de Ayuda - Support Co-Pilot")
 app.add_middleware(
@@ -218,7 +226,10 @@ def _verify_token(authorization: Optional[str] = Header(None)) -> Tuple[str, str
 
 @app.get("/health")
 def health():
-    return {"status": "ok"}
+    # Se lee en cada llamada: asi refleja el entorno real del despliegue, que es
+    # lo que hay que comprobar antes de una demostracion.
+    config = ConfigLLM.desde_entorno()
+    return {"status": "ok", "clasificacion": {**config.estado(), "advertencias": config.advertencias()}}
 
 
 @app.get("/me", response_model=dict)
