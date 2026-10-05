@@ -63,11 +63,11 @@ class ConfigLLM:
         return cls(
             base_url=_normalizar_base_url(base_url),
             api_key=os.getenv("LLM_API_KEY") or os.getenv("HF_API_TOKEN") or None,
-            modelo=os.getenv("LLM_MODEL") or os.getenv("HF_MODEL") or "llama-3.1-8b-instant",
+            modelo=os.getenv("LLM_MODEL") or os.getenv("HF_MODEL") or "openai/gpt-oss-20b",
             timeout=float(os.getenv("LLM_TIMEOUT", "20")),
             max_reintentos=int(os.getenv("LLM_MAX_REINTENTOS", "2")),
             temperatura=float(os.getenv("LLM_TEMPERATURA", "0")),
-            max_tokens=int(os.getenv("LLM_MAX_TOKENS", "300")),
+            max_tokens=int(os.getenv("LLM_MAX_TOKENS", "1500")),
             # Apagado por defecto: sin la variable puesta el sistema se comporta
             # exactamente como el Semestre 1 y no intenta salir a la red.
             habilitado=os.getenv("LLM_ENABLED", "").lower() in ("1", "true", "yes"),
@@ -160,6 +160,14 @@ class ClienteLLM:
                         self._esperar(intento, respuesta)
                         continue
                     raise ultimo_error
+
+                # Groq valida el JSON en el servidor y rechaza la respuesta entera
+                # (json_validate_failed) aunque el parser propio sabria recuperarla.
+                # Se reintenta una vez sin response_format.
+                if (respuesta.status_code == 400 and "json_validate_failed" in respuesta.text
+                        and "response_format" in cuerpo):
+                    cuerpo.pop("response_format")
+                    continue
 
                 if respuesta.status_code >= 400:
                     raise LLMError(f"HTTP {respuesta.status_code}: {respuesta.text[:200]}")

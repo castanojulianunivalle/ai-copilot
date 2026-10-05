@@ -12,7 +12,7 @@ if [ ! -f "python-api/.env" ]; then
     echo "   - SUPABASE_URL"
     echo "   - SUPABASE_SERVICE_ROLE_KEY"
     echo "   - LLM_API_KEY (key gratuita de Groq) con LLM_ENABLED=1"
-    echo "   - LLM_MODEL (por defecto: llama-3.1-8b-instant)"
+    echo "   - LLM_MODEL (por defecto: openai/gpt-oss-20b)"
     exit 1
 fi
 
