@@ -17,11 +17,11 @@ N8N_WEBHOOK_URL=
 LLM_ENABLED=1
 LLM_BASE_URL=https://api.groq.com/openai/v1
 LLM_API_KEY=your-groq-api-key
-LLM_MODEL=llama-3.1-8b-instant
+LLM_MODEL=openai/gpt-oss-20b
 LLM_TIMEOUT=20
 LLM_MAX_REINTENTOS=2
 LLM_TEMPERATURA=0
-LLM_MAX_TOKENS=300
+LLM_MAX_TOKENS=1500
 EOF
     echo "✅ python-api/.env creado"
 else

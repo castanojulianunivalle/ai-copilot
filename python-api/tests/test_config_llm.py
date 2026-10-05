@@ -26,7 +26,7 @@ def test_sin_variables_queda_apagado_y_con_valores_por_defecto():
     c = ConfigLLM.desde_entorno()
     assert not c.habilitado
     assert c.base_url == "https://api.groq.com/openai/v1"
-    assert c.modelo == "llama-3.1-8b-instant"
+    assert c.modelo == "openai/gpt-oss-20b"
     assert c.temperatura == 0
 
 
@@ -82,7 +82,7 @@ def test_el_estado_publicado_nunca_incluye_la_key(monkeypatch):
     monkeypatch.setenv("LLM_ENABLED", "1")
     monkeypatch.setenv("LLM_API_KEY", "hf_secreto_123")
     estado = ConfigLLM.desde_entorno().estado()
-    assert estado == {"llm_habilitado": True, "modelo": "llama-3.1-8b-instant",
+    assert estado == {"llm_habilitado": True, "modelo": "openai/gpt-oss-20b",
                       "proveedor": "api.groq.com", "tiene_api_key": True}
     assert "hf_secreto_123" not in str(estado)
 
