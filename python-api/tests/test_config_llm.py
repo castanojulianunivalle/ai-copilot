@@ -25,8 +25,8 @@ def entorno_limpio(monkeypatch):
 def test_sin_variables_queda_apagado_y_con_valores_por_defecto():
     c = ConfigLLM.desde_entorno()
     assert not c.habilitado
-    assert c.base_url == "https://router.huggingface.co/v1"
-    assert c.modelo == "meta-llama/Llama-3.1-8B-Instruct"
+    assert c.base_url == "https://api.groq.com/openai/v1"
+    assert c.modelo == "openai/gpt-oss-20b"
     assert c.temperatura == 0
 
 
@@ -82,6 +82,19 @@ def test_el_estado_publicado_nunca_incluye_la_key(monkeypatch):
     monkeypatch.setenv("LLM_ENABLED", "1")
     monkeypatch.setenv("LLM_API_KEY", "hf_secreto_123")
     estado = ConfigLLM.desde_entorno().estado()
-    assert estado == {"llm_habilitado": True, "modelo": "meta-llama/Llama-3.1-8B-Instruct",
-                      "proveedor": "router.huggingface.co", "tiene_api_key": True}
+    assert estado == {"llm_habilitado": True, "modelo": "openai/gpt-oss-20b",
+                      "proveedor": "api.groq.com", "tiene_api_key": True}
     assert "hf_secreto_123" not in str(estado)
+
+def test_hugging_face_sigue_disponible_con_dos_variables(monkeypatch):
+    monkeypatch.setenv("LLM_BASE_URL", "https://router.huggingface.co/v1")
+    monkeypatch.setenv("LLM_MODEL", "meta-llama/Llama-3.1-8B-Instruct")
+    c = ConfigLLM.desde_entorno()
+    assert (c.estado()["proveedor"], c.modelo) == ("router.huggingface.co", "meta-llama/Llama-3.1-8B-Instruct")
+
+
+@pytest.mark.parametrize("url", ["https://api.groq.com/openai/v1", "https://router.huggingface.co/v1"])
+def test_avisa_sin_key_contra_cualquier_proveedor_remoto(monkeypatch, url):
+    monkeypatch.setenv("LLM_ENABLED", "1")
+    monkeypatch.setenv("LLM_BASE_URL", url)
+    assert any("401" in a for a in ConfigLLM.desde_entorno().advertencias())

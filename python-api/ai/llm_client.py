@@ -59,15 +59,15 @@ class ConfigLLM:
         # en el Semestre 1. Se aceptan como respaldo porque un .env creado con
         # aquel script dejaba la key donde este cliente no la buscaba, y el LLM
         # quedaba apagado sin que nada lo advirtiera.
-        base_url = os.getenv("LLM_BASE_URL") or os.getenv("LLM_API_BASE_URL") or "https://router.huggingface.co/v1"
+        base_url = os.getenv("LLM_BASE_URL") or os.getenv("LLM_API_BASE_URL") or "https://api.groq.com/openai/v1"
         return cls(
             base_url=_normalizar_base_url(base_url),
             api_key=os.getenv("LLM_API_KEY") or os.getenv("HF_API_TOKEN") or None,
-            modelo=os.getenv("LLM_MODEL") or os.getenv("HF_MODEL") or "meta-llama/Llama-3.1-8B-Instruct",
+            modelo=os.getenv("LLM_MODEL") or os.getenv("HF_MODEL") or "openai/gpt-oss-20b",
             timeout=float(os.getenv("LLM_TIMEOUT", "20")),
             max_reintentos=int(os.getenv("LLM_MAX_REINTENTOS", "2")),
             temperatura=float(os.getenv("LLM_TEMPERATURA", "0")),
-            max_tokens=int(os.getenv("LLM_MAX_TOKENS", "300")),
+            max_tokens=int(os.getenv("LLM_MAX_TOKENS", "1500")),
             # Apagado por defecto: sin la variable puesta el sistema se comporta
             # exactamente como el Semestre 1 y no intenta salir a la red.
             habilitado=os.getenv("LLM_ENABLED", "").lower() in ("1", "true", "yes"),
@@ -87,9 +87,14 @@ class ConfigLLM:
         avisos = []
         if self.api_key and not self.habilitado:
             avisos.append("Hay API key pero LLM_ENABLED no esta activo: se clasifica solo con reglas")
-        if self.habilitado and not self.api_key and "huggingface" in self.base_url:
-            avisos.append("LLM_ENABLED esta activo pero no hay LLM_API_KEY: el router respondera 401")
+        if self.habilitado and not self.api_key and not _es_local(self.base_url):
+            avisos.append("LLM_ENABLED esta activo pero no hay LLM_API_KEY: el proveedor respondera 401")
         return avisos
+
+
+def _es_local(url: str) -> bool:
+    # Ollama o vLLM en la misma maquina no piden key.
+    return (urlsplit(url).hostname or "") in ("localhost", "127.0.0.1", "::1")
 
 
 def _normalizar_base_url(url: str) -> str:
@@ -155,6 +160,14 @@ class ClienteLLM:
                         self._esperar(intento, respuesta)
                         continue
                     raise ultimo_error
+
+                # Groq valida el JSON en el servidor y rechaza la respuesta entera
+                # (json_validate_failed) aunque el parser propio sabria recuperarla.
+                # Se reintenta una vez sin response_format.
+                if (respuesta.status_code == 400 and "json_validate_failed" in respuesta.text
+                        and "response_format" in cuerpo):
+                    cuerpo.pop("response_format")
+                    continue
 
                 if respuesta.status_code >= 400:
                     raise LLMError(f"HTTP {respuesta.status_code}: {respuesta.text[:200]}")

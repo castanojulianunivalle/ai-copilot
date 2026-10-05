@@ -202,3 +202,16 @@ def test_sin_confianza_se_asume_el_umbral_y_va_a_revision():
 def test_sin_categoria_es_invalida():
     with pytest.raises(RespuestaInvalida):
         parsear(json.dumps({"sentimiento": "Neutral"}))
+
+
+def test_json_validate_failed_de_groq_se_reintenta_sin_response_format():
+    cuerpos = []
+    def groq(req):
+        c = json.loads(req.content)
+        cuerpos.append(c)
+        if "response_format" in c:
+            return httpx.Response(400, text='{"error":{"code":"json_validate_failed"}}')
+        return respuesta_ok("Aqui va: " + json.dumps(CLASIFICACION))
+    r = clasificar("x", reglas, cliente_con(groq))
+    assert r.motor == MOTOR_LLM and r.clasificacion.categoria == "Facturación"
+    assert len(cuerpos) == 2 and "response_format" not in cuerpos[1]

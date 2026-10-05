@@ -16,17 +16,17 @@ PORT=8001
 
 ```
 LLM_ENABLED=1
-LLM_BASE_URL=https://router.huggingface.co/v1
-LLM_API_KEY=hf_xxxxxxxxxxxxxxxxx
-LLM_MODEL=meta-llama/Llama-3.1-8B-Instruct
+LLM_BASE_URL=https://api.groq.com/openai/v1
+LLM_API_KEY=gsk_xxxxxxxxxxxxxxxxx
+LLM_MODEL=openai/gpt-oss-20b
 LLM_TIMEOUT=20
 LLM_MAX_REINTENTOS=2
 LLM_TEMPERATURA=0
-LLM_MAX_TOKENS=300
+LLM_MAX_TOKENS=1500
 ```
 
 - **LLM_ENABLED**: apagado por defecto. Sin esta variable la API se comporta exactamente como el Semestre 1 (solo motor de reglas) y no intenta salir a la red. Es lo que permite desplegar el codigo del Sprint 5 sin activar la IA todavia.
-- **LLM_BASE_URL**: cualquier endpoint que hable el dialecto OpenAI de `/chat/completions`, sin ese sufijo (si lo trae, se recorta). Por defecto apunta a Hugging Face Router; sirve igual para vLLM (`http://localhost:8000/v1`) u Ollama (`http://localhost:11434/v1`).
+- **LLM_BASE_URL**: cualquier endpoint que hable el dialecto OpenAI de `/chat/completions`, sin ese sufijo (si lo trae, se recorta). Por defecto apunta a Groq, cuya capa gratuita sirve gpt-oss-20b (pesos abiertos) sin tarjeta; es un modelo de razonamiento, por eso LLM_MAX_TOKENS=1500 (key en https://console.groq.com/keys). Para volver a Hugging Face Router: `LLM_BASE_URL=https://router.huggingface.co/v1` y `LLM_MODEL=meta-llama/Llama-3.1-8B-Instruct`. Sirve igual para vLLM (`http://localhost:8000/v1`) u Ollama (`http://localhost:11434/v1`).
 - **LLM_TEMPERATURA**: dejar en `0`. La clasificacion debe ser reproducible: si el mismo ticket cambia de categoria entre corridas, la matriz de confusion del Sprint 6 deja de significar algo.
 - **LLM_TIMEOUT**: segundos. Al agotarse, la API cae al motor de reglas y el ticket se crea igual.
 - **Nombres antiguos**: `HF_API_TOKEN`, `HF_MODEL` y `LLM_API_BASE_URL`, que generaba `setup-env.sh` en el Semestre 1, se aceptan como respaldo. Los `LLM_*` tienen prioridad.
