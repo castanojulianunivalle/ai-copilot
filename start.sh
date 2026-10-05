@@ -11,8 +11,8 @@ if [ ! -f "python-api/.env" ]; then
     echo "✏️  Por favor edita python-api/.env con tus credenciales reales:"
     echo "   - SUPABASE_URL"
     echo "   - SUPABASE_SERVICE_ROLE_KEY"
-    echo "   - LLM_API_KEY (token de Hugging Face) con LLM_ENABLED=1"
-    echo "   - LLM_MODEL (por defecto: meta-llama/Llama-3.1-8B-Instruct)"
+    echo "   - LLM_API_KEY (key gratuita de Groq) con LLM_ENABLED=1"
+    echo "   - LLM_MODEL (por defecto: llama-3.1-8b-instant)"
     exit 1
 fi
 
