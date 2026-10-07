@@ -2,11 +2,21 @@
 
 Sistema de gestión de tickets de soporte con arquitectura evolutiva en tres semestres.
 
-> **Logo:** Auricular con micrófono — símbolo de soporte técnico y atención al cliente. Ver [docs/Entrega I/README.md](./docs/Entrega%20I/README.md#significado-del-logo) para más detalle.
+> **Logo:** Auricular con micrófono — símbolo de soporte técnico y atención al cliente.
 
 ---
 
-## Alcance Semestre I (Entrega actual)
+## Estado del proyecto
+
+| Release | Semestre | Estado | Rama |
+|---------|----------|--------|------|
+| 1.0 — Mesa de ayuda transaccional | I | Liberado (HU-01 a HU-04) | `main` |
+| 2.0 — Componente inteligente | II | En desarrollo: HU-08 (Sprint 4) y HU-06 (Sprint 5) terminadas; HU-09 en el Sprint 6 (12-29 oct 2026) | `develop` |
+| 3.0 — Automatización y analítica | III | Planificado: sprints 7 y 8 (2 nov - 11 dic 2026) | — |
+
+El código del Release 2.0 (clasificación con LLM, repliegue al motor de reglas, dataset y pruebas automáticas) está en la rama `develop` y llega a `main` al cerrar el Sprint 6. Desde el Sprint 5 el modelo es **gpt-oss-20b servido por Groq** (capa gratuita, API compatible con OpenAI).
+
+## Alcance Semestre I (Release 1.0)
 
 Sistema **sin IA**: CRUD transaccional con clasificación por reglas (palabras clave) como línea base para comparación con el LLM.
 
@@ -57,16 +67,9 @@ Sistema **sin IA**: CRUD transaccional con clasificación por reglas (palabras c
 - `n8n-workflow/`: flujo de automatización (Semestre 2)
 - `docker-compose.yml`, `start.sh`, `setup-env.sh`: orquestación local
 
-## 📝 URLs de entrega
+## 📝 Dónde se ejecuta
 
-| Componente | URL |
-|------------|-----|
-| Dashboard (Frontend) | https://tu-app.vercel.app/ |
-| API Python (Backend) | https://tu-api.onrender.com/docs |
-
-Ver [docs/Entrega I/README.md](./docs/Entrega%20I/README.md) para la documentación académica completa.
-
-⚠️ **Nota sobre Render**: El backend está desplegado en el plan gratuito de Render. La primera petición después de un período de inactividad puede tardar entre 30-60 segundos mientras el servicio se "despierta". Las peticiones subsiguientes son inmediatas.
+El sistema se ejecuta en local, con Docker Compose o con los pasos de [QUICKSTART.md](./QUICKSTART.md); la base de datos puede ser un proyecto de Supabase en la nube o Supabase local (`supabase start`). No hay un despliegue público permanente. [DEPLOY.md](./DEPLOY.md) describe cómo publicar la API en Render y el frontend en Vercel.
 
 ## 🎨 Mejoras en el Frontend
 
@@ -107,8 +110,8 @@ Ver [docs/Entrega I/README.md](./docs/Entrega%20I/README.md) para la documentaci
 
 | Semestre | Sprints | Funcionalidad planificada |
 |----------|---------|---------------------------|
-| **Sem 2** | 4 · 5 · 6 | Dataset histórico + LLM (Llama-3.1) para clasificación y sentimiento + evaluación F1-Score / matriz de confusión |
-| **Sem 3** | 7 · 8 · 9 | n8n (webhooks, Telegram/Email), Realtime, dashboard analítico y artículo final |
+| **Sem 2** | 4 · 5 · 6 | Dataset histórico + LLM (gpt-oss-20b en Groq desde el Sprint 5; el plan partía de Llama-3.1) para clasificación y sentimiento + evaluación F1-Score / matriz de confusión |
+| **Sem 3** | 7 · 8 | n8n (webhooks, Telegram/Email), Realtime, dashboard analítico y artículo final |
 
 ## 🐳 Docker Compose (Recomendado)
 
