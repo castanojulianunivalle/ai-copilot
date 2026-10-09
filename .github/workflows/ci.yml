@@ -1,0 +1,41 @@
+# Integración continua: cada push y cada pull request hacia develop o main corre
+# las pruebas de la API y el build del frontend. Las pruebas no salen a la red:
+# el LLM y Supabase están simulados, así que no hacen falta secretos.
+name: CI
+
+on:
+  push:
+    branches: [develop, main]
+  pull_request:
+    branches: [develop, main]
+
+jobs:
+  api:
+    name: API · pytest
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: python-api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"          # la misma del Dockerfile de la API
+          cache: pip
+          cache-dependency-path: python-api/requirements*.txt
+      - run: pip install -r requirements-dev.txt
+      - run: pytest -q
+
+  frontend:
+    name: Frontend · build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npm install --no-audit --no-fund
+      - run: npm run build
