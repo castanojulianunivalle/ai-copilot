@@ -15,13 +15,59 @@ type Ticket = {
   description: string;
   category: string | null;
   estado: string;
+  // HU-06: salidas del componente inteligente, guardadas con el ticket.
+  sentimiento?: string | null;
+  prioridad?: string | null;
+  confianza_ia?: number | null;
+  clasificado_por?: string | null;
 };
 
 const estadoColor = (estado: string) => {
   return estado === 'Cerrado'
-    ? 'bg-green-500/10 text-green-300 border-green-500/30'
-    : 'bg-amber-500/10 text-amber-300 border-amber-500/30';
+    ? 'bg-green-500/10 text-green-700 dark:text-green-300 border-green-500/40'
+    : 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/40';
 };
+
+const sentimientoColor = (sentimiento: string) => {
+  switch (sentimiento) {
+    case 'Frustrado':
+      return 'bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/40';
+    case 'Urgente':
+      return 'bg-orange-500/10 text-orange-700 dark:text-orange-300 border-orange-500/40';
+    case 'Satisfecho':
+      return 'bg-green-500/10 text-green-700 dark:text-green-300 border-green-500/40';
+    default:
+      return 'bg-slate-500/10 text-slate-600 dark:text-slate-300 border-slate-500/40';
+  }
+};
+
+const prioridadColor = (prioridad: string) => {
+  switch (prioridad) {
+    case 'Alta':
+      return 'bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/40';
+    case 'Media':
+      return 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/40';
+    default:
+      return 'bg-slate-500/10 text-slate-600 dark:text-slate-300 border-slate-500/40';
+  }
+};
+
+// Mismo umbral que la API (CONFIANZA_REVISION_HUMANA en python-api/ai/parser.py),
+// inclusivo: un 0,5 lo revisa una persona.
+const UMBRAL_REVISION = 0.5;
+
+const requiereRevision = (ticket: Ticket) =>
+  ticket.clasificado_por === 'llm' &&
+  ticket.confianza_ia != null &&
+  Number(ticket.confianza_ia) <= UMBRAL_REVISION;
+
+const formatoConfianza = (confianza: number | null | undefined) =>
+  confianza == null ? '' : Number(confianza).toLocaleString('es-CO', { maximumFractionDigits: 2 });
+
+const origenClasificacion = (ticket: Ticket) =>
+  ticket.clasificado_por === 'llm'
+    ? `IA · confianza ${formatoConfianza(ticket.confianza_ia)}`
+    : 'Motor de reglas';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8001';
 
@@ -346,7 +392,9 @@ export default function App() {
   const filteredTickets = tickets.filter(ticket =>
     ticket.titulo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     ticket.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    ticket.category?.toLowerCase().includes(searchTerm.toLowerCase())
+    ticket.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    ticket.sentimiento?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    ticket.prioridad?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const totalPages = Math.ceil(filteredTickets.length / itemsPerPage);
@@ -504,6 +552,26 @@ export default function App() {
                       <span>{ticket.category || 'Sin categoría'}</span>
                       <span>{new Date(ticket.created_at).toLocaleDateString()}</span>
                     </div>
+                    <div className="flex flex-wrap items-center gap-1.5 mt-2 text-xs">
+                      {ticket.sentimiento && (
+                        <span className={`px-2 py-0.5 rounded border ${sentimientoColor(ticket.sentimiento)}`} title="Sentimiento detectado">
+                          {ticket.sentimiento}
+                        </span>
+                      )}
+                      {ticket.prioridad && (
+                        <span className={`px-2 py-0.5 rounded border ${prioridadColor(ticket.prioridad)}`} title="Prioridad">
+                          Prioridad {ticket.prioridad}
+                        </span>
+                      )}
+                      <span className="px-2 py-0.5 rounded border bg-primary-500/10 text-primary-700 dark:text-primary-300 border-primary-500/40" title="Quién clasificó el ticket">
+                        {origenClasificacion(ticket)}
+                      </span>
+                      {requiereRevision(ticket) && (
+                        <span className="px-2 py-0.5 rounded border bg-yellow-400/20 text-yellow-800 dark:text-yellow-300 border-yellow-500/50 font-medium" title="Confianza en el umbral o por debajo: lo revisa una persona">
+                          Requiere revisión
+                        </span>
+                      )}
+                    </div>
                     <div 
                       className="absolute top-2 right-2 flex gap-1.5 z-10"
                       onClick={(e) => e.stopPropagation()}
@@ -608,6 +676,22 @@ export default function App() {
                   <p><strong>Título:</strong> {selectedTicket.titulo}</p>
                   <p><strong>Descripción:</strong> {selectedTicket.description}</p>
                   <p><strong>Categoría:</strong> {selectedTicket.category || 'Sin categoría'}</p>
+                  <p><strong>Sentimiento:</strong>{' '}
+                    {selectedTicket.sentimiento
+                      ? <span className={`px-2 py-0.5 rounded text-xs border ${sentimientoColor(selectedTicket.sentimiento)}`}>{selectedTicket.sentimiento}</span>
+                      : 'No detectado (clasificó el motor de reglas)'}
+                  </p>
+                  <p><strong>Prioridad:</strong>{' '}
+                    {selectedTicket.prioridad
+                      ? <span className={`px-2 py-0.5 rounded text-xs border ${prioridadColor(selectedTicket.prioridad)}`}>{selectedTicket.prioridad}</span>
+                      : 'Sin prioridad'}
+                  </p>
+                  <p><strong>Clasificado por:</strong> {origenClasificacion(selectedTicket)}</p>
+                  {requiereRevision(selectedTicket) && (
+                    <p className="text-sm px-3 py-2 rounded border bg-yellow-400/20 text-yellow-800 dark:text-yellow-300 border-yellow-500/50">
+                      Requiere revisión humana: la confianza del modelo está en el umbral ({formatoConfianza(UMBRAL_REVISION)}) o por debajo.
+                    </p>
+                  )}
                   <p><strong>Estado:</strong> <span className={`px-2 py-0.5 rounded text-xs border ${estadoColor(selectedTicket.estado)}`}>{selectedTicket.estado}</span></p>
                   {isAgente && (
                   <div className="flex gap-2 pt-2">
