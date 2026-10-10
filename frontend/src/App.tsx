@@ -1,11 +1,14 @@
-import { useEffect, useRef, useState, Fragment } from 'react';
+import { useEffect, useRef, useState, Fragment, Suspense, lazy } from 'react';
 import { supabase } from './lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Eye, CheckCircle, XCircle, AlertCircle, Loader2, Search, Edit, Trash2, X, LogOut, Users } from 'lucide-react';
+import { Plus, Eye, CheckCircle, XCircle, AlertCircle, Loader2, Search, Edit, Trash2, X, LogOut, Users, Inbox, BarChart3 } from 'lucide-react';
 import ThemeToggle from './components/ThemeToggle';
 import { useAuth } from './contexts/AuthContext';
 import LoginRegister from './components/LoginRegister';
 import AdminUsers from './components/AdminUsers';
+// Carga diferida: Recharts pesa ~400 kB y solo lo ven agentes y
+// administradores. Un cliente no debe descargarlo nunca.
+const Reportes = lazy(() => import('./components/reportes/Reportes'));
 
 type Ticket = {
   id: string;
@@ -62,7 +65,10 @@ export default function App() {
   const [tourStepIndex, setTourStepIndex] = useState(0);
   const [highlightedElement, setHighlightedElement] = useState<HTMLElement | null>(null);
   const [isMobile, setIsMobile] = useState(false);
-  const [adminView, setAdminView] = useState(false);
+  // Tres vistas ya no caben en un booleano. Antes era `adminView`; con
+  // reportes de por medio, encadenar banderas produciría estados imposibles
+  // (usuarios y reportes activos a la vez).
+  const [vista, setVista] = useState<'tickets' | 'usuarios' | 'reportes'>('tickets');
   const itemsPerPage = 9; // 3x3 grid
   const currentPageRef = useRef(currentPage);
   const headerRef = useRef<HTMLElement>(null);
@@ -396,23 +402,37 @@ export default function App() {
             <div>
               <h1 className="text-2xl font-bold text-white">AI Support Co-Pilot</h1>
               <p className="text-primary-100 dark:text-primary-200">
-                Mesa de Ayuda - Gestión de tickets (Semestre 1).
+                Mesa de Ayuda con clasificación asistida por IA.
               </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {isAdministrador && (
-              <button
-                onClick={() => setAdminView(!adminView)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                  adminView ? 'bg-white/30 text-white' : 'bg-white/10 hover:bg-white/20 text-primary-100'
-                }`}
-                title={adminView ? 'Ver tickets' : 'Gestión de usuarios'}
-              >
-                <Users className="w-4 h-4 inline mr-1.5 -mt-0.5" />
-                {adminView ? 'Tickets' : 'Usuarios'}
-              </button>
-            )}
+            {/* Navegación entre vistas. Reportes es para agente y administrador:
+                un cliente solo ve sus propios tickets, y darle las métricas
+                agregadas revelaría el volumen y los problemas de terceros. */}
+            <nav className="flex items-center gap-1" aria-label="Vistas">
+              {([
+                { id: 'tickets', etiqueta: 'Tickets', icono: Inbox, visible: true },
+                { id: 'reportes', etiqueta: 'Reportes', icono: BarChart3, visible: isAgente },
+                { id: 'usuarios', etiqueta: 'Usuarios', icono: Users, visible: isAdministrador },
+              ] as const)
+                .filter((v) => v.visible)
+                .map(({ id, etiqueta, icono: Icono }) => (
+                  <button
+                    key={id}
+                    onClick={() => setVista(id)}
+                    aria-current={vista === id ? 'page' : undefined}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                      vista === id
+                        ? 'bg-white/30 text-white'
+                        : 'bg-white/10 hover:bg-white/20 text-primary-100'
+                    }`}
+                  >
+                    <Icono className="w-4 h-4 inline mr-1.5 -mt-0.5" />
+                    {etiqueta}
+                  </button>
+                ))}
+            </nav>
             <span className="text-sm text-primary-100">
               {profile?.role === 'administrador' ? 'Administrador' : profile?.role === 'agente' ? 'Agente' : 'Cliente'}
             </span>
@@ -428,8 +448,18 @@ export default function App() {
           </div>
         </motion.header>
 
-        {adminView && isAdministrador ? (
+        {vista === 'usuarios' && isAdministrador ? (
           <AdminUsers />
+        ) : vista === 'reportes' && isAgente ? (
+          <Suspense
+            fallback={
+              <div className="flex items-center justify-center py-24">
+                <Loader2 className="w-10 h-10 animate-spin text-primary-500" />
+              </div>
+            }
+          >
+            <Reportes apiUrl={API_URL} authHeaders={authHeaders} />
+          </Suspense>
         ) : (
         <Fragment>
         {isCliente && (
