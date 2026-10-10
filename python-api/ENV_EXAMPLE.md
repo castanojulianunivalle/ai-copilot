@@ -29,3 +29,20 @@ LLM_MAX_TOKENS=300
 - **LLM_BASE_URL**: cualquier endpoint que hable el dialecto OpenAI de `/chat/completions`. Probado contra Hugging Face Router; sirve igual para vLLM (`http://localhost:8000/v1`) u Ollama (`http://localhost:11434/v1`).
 - **LLM_TEMPERATURA**: dejar en `0`. La clasificacion debe ser reproducible: si el mismo ticket cambia de categoria entre corridas, la matriz de confusion del Sprint 6 deja de significar algo.
 - **LLM_TIMEOUT**: segundos. Al agotarse, la API cae al motor de reglas y el ticket se crea igual.
+
+---
+
+## Notificaciones n8n (Semestre 3 · Sprint 7)
+
+```
+N8N_WEBHOOK_URL=https://tu-n8n.app/webhook/aiscop
+N8N_WEBHOOK_SECRET=un-secreto-largo-y-aleatorio
+N8N_PRIORIDADES=Alta
+N8N_TIMEOUT=5
+APP_URL=https://tu-app.vercel.app
+```
+
+- **N8N_WEBHOOK_URL**: sin esta variable no se notifica nada y la API se comporta como antes. El aviso sale en un BackgroundTask, despues de responder al cliente: un n8n caido o lento no retrasa la creacion de un ticket.
+- **N8N_WEBHOOK_SECRET**: el webhook de n8n es una URL publica. Con el secreto puesto, la API firma el cuerpo con HMAC-SHA256 y lo manda en la cabecera `X-Signature-256`; el flujo de n8n valida esa firma antes de procesar el evento. Sin el, cualquiera que descubra la URL puede inyectar alertas falsas.
+- **N8N_PRIORIDADES**: que prioridades disparan el aviso, separadas por coma. `Alta` en produccion; durante las pruebas conviene `Alta,Media,Baja`.
+- **APP_URL**: si se define, el payload incluye el enlace directo al ticket para que el mensaje de Telegram sea accionable.
