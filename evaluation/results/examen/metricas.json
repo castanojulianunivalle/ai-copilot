@@ -1,0 +1,1264 @@
+{
+  "generado_en": "2026-10-18T01:22:06+00:00",
+  "commit": "db0739d",
+  "arbol_limpio": true,
+  "particion": "examen",
+  "fixture": "tickets_etiquetados.jsonl",
+  "sha256_fixture": "c69d84040663ac52a16bbd3729ee4e53a268f927ce58578dfbec78175f0037f8",
+  "n": 44,
+  "etiquetas": [
+    "Técnico",
+    "Facturación",
+    "Comercial",
+    "Acceso",
+    "Cuenta",
+    "Rendimiento",
+    "UX/UI",
+    "Seguridad",
+    "Integraciones",
+    "Móvil",
+    "Solicitudes"
+  ],
+  "reglas": {
+    "n": 44,
+    "aciertos": 23,
+    "exactitud": 0.5227,
+    "precision_macro": 0.5773,
+    "recall_macro": 0.5227,
+    "f1_macro": 0.5156,
+    "f1_ponderado": 0.5156,
+    "f1_micro": 0.5227,
+    "etiquetas": [
+      "Técnico",
+      "Facturación",
+      "Comercial",
+      "Acceso",
+      "Cuenta",
+      "Rendimiento",
+      "UX/UI",
+      "Seguridad",
+      "Integraciones",
+      "Móvil",
+      "Solicitudes"
+    ],
+    "matriz_confusion": [
+      [
+        3,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        4,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        2,
+        0,
+        1,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        2,
+        1,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        2,
+        0,
+        0,
+        0,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        2,
+        0,
+        0,
+        0,
+        0,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        2,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        1,
+        0,
+        0,
+        1,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        3,
+        0,
+        0
+      ],
+      [
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        3,
+        0
+      ],
+      [
+        3,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0
+      ]
+    ],
+    "por_clase": {
+      "Técnico": {
+        "precision": 0.2,
+        "recall": 0.75,
+        "f1": 0.3158,
+        "soporte": 4
+      },
+      "Facturación": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "soporte": 4
+      },
+      "Comercial": {
+        "precision": 1.0,
+        "recall": 0.5,
+        "f1": 0.6667,
+        "soporte": 4
+      },
+      "Acceso": {
+        "precision": 0.6667,
+        "recall": 0.5,
+        "f1": 0.5714,
+        "soporte": 4
+      },
+      "Cuenta": {
+        "precision": 0.3333,
+        "recall": 0.5,
+        "f1": 0.4,
+        "soporte": 4
+      },
+      "Rendimiento": {
+        "precision": 1.0,
+        "recall": 0.5,
+        "f1": 0.6667,
+        "soporte": 4
+      },
+      "UX/UI": {
+        "precision": 0.4,
+        "recall": 0.5,
+        "f1": 0.4444,
+        "soporte": 4
+      },
+      "Seguridad": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "soporte": 4
+      },
+      "Integraciones": {
+        "precision": 1.0,
+        "recall": 0.75,
+        "f1": 0.8571,
+        "soporte": 4
+      },
+      "Móvil": {
+        "precision": 0.75,
+        "recall": 0.75,
+        "f1": 0.75,
+        "soporte": 4
+      },
+      "Solicitudes": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "soporte": 4
+      }
+    }
+  },
+  "versiones": {
+    "clasificacion-v1": {
+      "cobertura": {
+        "evaluados": 44,
+        "de": 44
+      },
+      "modelos": [
+        "openai/gpt-oss-20b@clasificacion-v1"
+      ],
+      "latencia_ms": {
+        "mediana": 4530,
+        "p95": 11034,
+        "max": 12617
+      },
+      "llm": {
+        "n": 44,
+        "aciertos": 35,
+        "exactitud": 0.7955,
+        "precision_macro": 0.7535,
+        "recall_macro": 0.7955,
+        "f1_macro": 0.7632,
+        "f1_ponderado": 0.7632,
+        "f1_micro": 0.7955,
+        "etiquetas": [
+          "Técnico",
+          "Facturación",
+          "Comercial",
+          "Acceso",
+          "Cuenta",
+          "Rendimiento",
+          "UX/UI",
+          "Seguridad",
+          "Integraciones",
+          "Móvil",
+          "Solicitudes"
+        ],
+        "matriz_confusion": [
+          [
+            3,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            4,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            3,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1
+          ],
+          [
+            0,
+            0,
+            0,
+            3,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            1,
+            2,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            4,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            4,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            4,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            4,
+            0,
+            0
+          ],
+          [
+            3,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            4
+          ]
+        ],
+        "por_clase": {
+          "Técnico": {
+            "precision": 0.5,
+            "recall": 0.75,
+            "f1": 0.6,
+            "soporte": 4
+          },
+          "Facturación": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "soporte": 4
+          },
+          "Comercial": {
+            "precision": 1.0,
+            "recall": 0.75,
+            "f1": 0.8571,
+            "soporte": 4
+          },
+          "Acceso": {
+            "precision": 0.75,
+            "recall": 0.75,
+            "f1": 0.75,
+            "soporte": 4
+          },
+          "Cuenta": {
+            "precision": 0.6667,
+            "recall": 0.5,
+            "f1": 0.5714,
+            "soporte": 4
+          },
+          "Rendimiento": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "soporte": 4
+          },
+          "UX/UI": {
+            "precision": 0.8,
+            "recall": 1.0,
+            "f1": 0.8889,
+            "soporte": 4
+          },
+          "Seguridad": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "soporte": 4
+          },
+          "Integraciones": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "soporte": 4
+          },
+          "Móvil": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "soporte": 4
+          },
+          "Solicitudes": {
+            "precision": 0.5714,
+            "recall": 1.0,
+            "f1": 0.7273,
+            "soporte": 4
+          }
+        }
+      },
+      "reglas_pareado": {
+        "n": 44,
+        "aciertos": 23,
+        "exactitud": 0.5227,
+        "precision_macro": 0.5773,
+        "recall_macro": 0.5227,
+        "f1_macro": 0.5156,
+        "f1_ponderado": 0.5156,
+        "f1_micro": 0.5227,
+        "etiquetas": [
+          "Técnico",
+          "Facturación",
+          "Comercial",
+          "Acceso",
+          "Cuenta",
+          "Rendimiento",
+          "UX/UI",
+          "Seguridad",
+          "Integraciones",
+          "Móvil",
+          "Solicitudes"
+        ],
+        "matriz_confusion": [
+          [
+            3,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            4,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            2,
+            0,
+            1,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            2,
+            1,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            2,
+            0,
+            0,
+            0,
+            2,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            2,
+            0,
+            0,
+            0,
+            0,
+            2,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            2,
+            0,
+            0,
+            0,
+            0,
+            0,
+            2,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            1,
+            0,
+            0,
+            1,
+            2,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            3,
+            0,
+            0
+          ],
+          [
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            3,
+            0
+          ],
+          [
+            3,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0
+          ]
+        ],
+        "por_clase": {
+          "Técnico": {
+            "precision": 0.2,
+            "recall": 0.75,
+            "f1": 0.3158,
+            "soporte": 4
+          },
+          "Facturación": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "soporte": 4
+          },
+          "Comercial": {
+            "precision": 1.0,
+            "recall": 0.5,
+            "f1": 0.6667,
+            "soporte": 4
+          },
+          "Acceso": {
+            "precision": 0.6667,
+            "recall": 0.5,
+            "f1": 0.5714,
+            "soporte": 4
+          },
+          "Cuenta": {
+            "precision": 0.3333,
+            "recall": 0.5,
+            "f1": 0.4,
+            "soporte": 4
+          },
+          "Rendimiento": {
+            "precision": 1.0,
+            "recall": 0.5,
+            "f1": 0.6667,
+            "soporte": 4
+          },
+          "UX/UI": {
+            "precision": 0.4,
+            "recall": 0.5,
+            "f1": 0.4444,
+            "soporte": 4
+          },
+          "Seguridad": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "soporte": 4
+          },
+          "Integraciones": {
+            "precision": 1.0,
+            "recall": 0.75,
+            "f1": 0.8571,
+            "soporte": 4
+          },
+          "Móvil": {
+            "precision": 0.75,
+            "recall": 0.75,
+            "f1": 0.75,
+            "soporte": 4
+          },
+          "Solicitudes": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "soporte": 4
+          }
+        }
+      },
+      "mcnemar_vs_reglas": {
+        "b": 4,
+        "c": 16,
+        "n_desacuerdos": 20,
+        "p_valor": 0.011818,
+        "significativo": true
+      },
+      "delta_f1_macro": 0.2475,
+      "delta_exactitud": 0.2727
+    },
+    "clasificacion-v2": {
+      "cobertura": {
+        "evaluados": 44,
+        "de": 44
+      },
+      "modelos": [
+        "openai/gpt-oss-20b@clasificacion-v2"
+      ],
+      "latencia_ms": {
+        "mediana": 979,
+        "p95": 1579,
+        "max": 1880
+      },
+      "llm": {
+        "n": 44,
+        "aciertos": 38,
+        "exactitud": 0.8636,
+        "precision_macro": 0.8974,
+        "recall_macro": 0.8636,
+        "f1_macro": 0.8634,
+        "f1_ponderado": 0.8634,
+        "f1_micro": 0.8636,
+        "etiquetas": [
+          "Técnico",
+          "Facturación",
+          "Comercial",
+          "Acceso",
+          "Cuenta",
+          "Rendimiento",
+          "UX/UI",
+          "Seguridad",
+          "Integraciones",
+          "Móvil",
+          "Solicitudes"
+        ],
+        "matriz_confusion": [
+          [
+            4,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            1,
+            3,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            4,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            3,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            3,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            4,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            4,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            3,
+            0,
+            0,
+            1
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            4,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            2,
+            1
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            4
+          ]
+        ],
+        "por_clase": {
+          "Técnico": {
+            "precision": 0.8,
+            "recall": 1.0,
+            "f1": 0.8889,
+            "soporte": 4
+          },
+          "Facturación": {
+            "precision": 1.0,
+            "recall": 0.75,
+            "f1": 0.8571,
+            "soporte": 4
+          },
+          "Comercial": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "soporte": 4
+          },
+          "Acceso": {
+            "precision": 0.75,
+            "recall": 0.75,
+            "f1": 0.75,
+            "soporte": 4
+          },
+          "Cuenta": {
+            "precision": 0.75,
+            "recall": 0.75,
+            "f1": 0.75,
+            "soporte": 4
+          },
+          "Rendimiento": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "soporte": 4
+          },
+          "UX/UI": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "soporte": 4
+          },
+          "Seguridad": {
+            "precision": 1.0,
+            "recall": 0.75,
+            "f1": 0.8571,
+            "soporte": 4
+          },
+          "Integraciones": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "soporte": 4
+          },
+          "Móvil": {
+            "precision": 1.0,
+            "recall": 0.5,
+            "f1": 0.6667,
+            "soporte": 4
+          },
+          "Solicitudes": {
+            "precision": 0.5714,
+            "recall": 1.0,
+            "f1": 0.7273,
+            "soporte": 4
+          }
+        }
+      },
+      "reglas_pareado": {
+        "n": 44,
+        "aciertos": 23,
+        "exactitud": 0.5227,
+        "precision_macro": 0.5773,
+        "recall_macro": 0.5227,
+        "f1_macro": 0.5156,
+        "f1_ponderado": 0.5156,
+        "f1_micro": 0.5227,
+        "etiquetas": [
+          "Técnico",
+          "Facturación",
+          "Comercial",
+          "Acceso",
+          "Cuenta",
+          "Rendimiento",
+          "UX/UI",
+          "Seguridad",
+          "Integraciones",
+          "Móvil",
+          "Solicitudes"
+        ],
+        "matriz_confusion": [
+          [
+            3,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            4,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            2,
+            0,
+            1,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            2,
+            1,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            2,
+            0,
+            0,
+            0,
+            2,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            2,
+            0,
+            0,
+            0,
+            0,
+            2,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            2,
+            0,
+            0,
+            0,
+            0,
+            0,
+            2,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            1,
+            0,
+            0,
+            1,
+            2,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            3,
+            0,
+            0
+          ],
+          [
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            3,
+            0
+          ],
+          [
+            3,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0
+          ]
+        ],
+        "por_clase": {
+          "Técnico": {
+            "precision": 0.2,
+            "recall": 0.75,
+            "f1": 0.3158,
+            "soporte": 4
+          },
+          "Facturación": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "soporte": 4
+          },
+          "Comercial": {
+            "precision": 1.0,
+            "recall": 0.5,
+            "f1": 0.6667,
+            "soporte": 4
+          },
+          "Acceso": {
+            "precision": 0.6667,
+            "recall": 0.5,
+            "f1": 0.5714,
+            "soporte": 4
+          },
+          "Cuenta": {
+            "precision": 0.3333,
+            "recall": 0.5,
+            "f1": 0.4,
+            "soporte": 4
+          },
+          "Rendimiento": {
+            "precision": 1.0,
+            "recall": 0.5,
+            "f1": 0.6667,
+            "soporte": 4
+          },
+          "UX/UI": {
+            "precision": 0.4,
+            "recall": 0.5,
+            "f1": 0.4444,
+            "soporte": 4
+          },
+          "Seguridad": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "soporte": 4
+          },
+          "Integraciones": {
+            "precision": 1.0,
+            "recall": 0.75,
+            "f1": 0.8571,
+            "soporte": 4
+          },
+          "Móvil": {
+            "precision": 0.75,
+            "recall": 0.75,
+            "f1": 0.75,
+            "soporte": 4
+          },
+          "Solicitudes": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "soporte": 4
+          }
+        }
+      },
+      "mcnemar_vs_reglas": {
+        "b": 2,
+        "c": 17,
+        "n_desacuerdos": 19,
+        "p_valor": 0.000729,
+        "significativo": true
+      },
+      "delta_f1_macro": 0.3477,
+      "delta_exactitud": 0.3409
+    }
+  },
+  "comparacion_versiones": {
+    "de": "clasificacion-v1",
+    "a": "clasificacion-v2",
+    "n": 44,
+    "mcnemar": {
+      "b": 2,
+      "c": 5,
+      "n_desacuerdos": 7,
+      "p_valor": 0.453125,
+      "significativo": false
+    },
+    "delta_f1_macro": 0.1002,
+    "delta_exactitud": 0.0682
+  }
+}

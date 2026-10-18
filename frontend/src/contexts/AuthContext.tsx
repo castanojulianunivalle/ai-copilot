@@ -1,8 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8001';
+import { API_URL } from '../lib/api';
 
 type Profile = { id: string; role: 'cliente' | 'agente' | 'administrador' };
 
@@ -11,9 +10,10 @@ type AuthContextType = {
   user: User | null;
   profile: Profile | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
+  signIn: (email: string, password: string) => Promise<{ error?: string }>;
+  signUp: (email: string, password: string) => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
+  resetPassword: (email: string) => Promise<{ error?: string }>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -79,18 +79,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfile(data ? { id: data.id, role } : null);
   }
 
+  // supabase-js no lanza cuando la red falla: devuelve AuthRetryableFetchError
+  // con status 0. Sin distinguirlo, un servidor caído le diría al usuario que
+  // su contraseña está mal.
+  const ERROR_RED = 'No pudimos conectar con el servidor. Revisa tu conexión e intenta de nuevo.';
+  const esFalloDeRed = (error: { name?: string; status?: number }) =>
+    error.name === 'AuthRetryableFetchError' || error.status === 0;
+
   async function signIn(email: string, password: string) {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return { error };
+    if (!error) return { error: undefined };
+    return { error: esFalloDeRed(error) ? ERROR_RED : 'Correo o contraseña incorrectos' };
   }
 
   async function signUp(email: string, password: string) {
-    const { error } = await supabase.auth.signUp({ email, password });
-    return { error };
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    if (error) return { error: esFalloDeRed(error) ? ERROR_RED : error.message };
+    if (data.user && data.user.identities?.length === 0)
+      return { error: 'Este correo ya está registrado' };
+    return { error: undefined };
   }
 
   async function signOut() {
     await supabase.auth.signOut();
+  }
+
+  async function resetPassword(email: string) {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    return { error: error?.message };
   }
 
   return (
@@ -103,6 +121,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signIn,
         signUp,
         signOut,
+        resetPassword,
       }}
     >
       {children}

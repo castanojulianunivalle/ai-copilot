@@ -2,10 +2,9 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Users, Loader2, Shield, User, UserCog } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { API_URL } from '../lib/api';
 
 type AdminUser = { id: string; email: string; role: string };
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8001';
 
 export default function AdminUsers() {
   const { session } = useAuth();
