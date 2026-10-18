@@ -56,3 +56,17 @@ jobs:
       # npm ci instala exactamente package-lock.json: el mismo árbol que construye Render (HU-10)
       - run: npm ci --no-audit --no-fund
       - run: npm run build
+
+  secretos:
+    name: Seguridad · secretos
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0              # revisa también todo el historial, no solo el último commit
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      # HU-10, CA-2: ningún secreto en el repositorio. Falla si aparece una llave que no esté
+      # entre las excepciones revisadas (deploy/revisar_secretos.py).
+      - run: python deploy/revisar_secretos.py
