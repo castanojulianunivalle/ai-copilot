@@ -156,16 +156,21 @@ def humo(ctx: Contexto) -> None:
         return f"/me: {roles}", roles == {"cliente": "cliente", "agente": "agente"}
 
     @caso(ctx, "TC-H4", "Persistencia y servicio inteligente",
-          "el ticket se crea clasificado por el LLM, el agente lo lee y quedan las dos predicciones en el log")
+          "el ticket se crea clasificado por el LLM; el agente lo lee con categoría, tono, prioridad y confianza, y "
+          "quedan las dos predicciones en el log")
     def _():
         t = crear_ticket(ctx, "Me cobraron dos veces", "En el extracto de este mes aparece dos veces el cargo de la suscripción.")
-        fila = rest(ctx, f"tickets?id=eq.{t['ticket_id']}&select=category,clasificado_por,confianza_ia", "agente")[1]
+        fila = rest(ctx, f"tickets?id=eq.{t['ticket_id']}&select=estado,category,sentimiento,prioridad,confianza_ia,"
+                         "clasificado_por", "agente")[1]
         log = rest(ctx, f"classification_log?ticket_id=eq.{t['ticket_id']}&select=motor", "agente")[1]
         motores = sorted(f["motor"] for f in log)
+        guardado = fila[0] if len(fila) == 1 else {}
         ok = (t["clasificado_por"] == "llm" and t["category"] in CATEGORIAS and 0 <= (t["confianza_ia"] or -1) <= 1
-              and len(fila) == 1 and fila[0]["category"] == t["category"] and motores == ["llm", "reglas"])
+              and guardado.get("estado") == "Abierto" and guardado.get("category") == t["category"]
+              and guardado.get("sentimiento") and guardado.get("prioridad") and motores == ["llm", "reglas"])
         ctx.ticket_humo = t["ticket_id"]
-        return f"{t['category']} · confianza {t['confianza_ia']} · el agente lo ve: {len(fila) == 1} · log {motores}", ok
+        return (f"{t['category']} · {guardado.get('sentimiento')} · prioridad {guardado.get('prioridad')} · confianza "
+                f"{t['confianza_ia']} · estado {guardado.get('estado')} · el agente lo ve: {bool(guardado)} · log {motores}"), ok
 
     @caso(ctx, "TC-H6", "El agente cambia el estado; el cliente no puede",
           "PATCH del agente 200 y el cliente ve el ticket Cerrado (RLS: solo los suyos); PATCH del cliente 403")
