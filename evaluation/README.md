@@ -9,6 +9,7 @@ Ambos motores clasifican los **mismos** tickets de un conjunto etiquetado a mano
 | Exactitud | Es la cifra de titular, fácil de comunicar. |
 | **F1 macro** | **Es la métrica principal.** Cada categoría pesa igual, sin importar cuántos tickets tenga. |
 | F1 ponderado | Se reporta junto al macro. |
+| F1 micro | Lo pide la DoD de HU-09. Con una sola etiqueta por ticket coincide con la exactitud, porque cada error es a la vez un falso positivo y un falso negativo. |
 | Precisión y recall por clase | Muestran dónde mejora o empeora el modelo. |
 | Matriz de confusión | Muestra con qué se confunde cada categoría. |
 | **McNemar exacta** | Dice si la diferencia entre motores es significativa, mirando solo los tickets en que discrepan. |
@@ -63,7 +64,7 @@ Con `--llm` hacen falta `LLM_ENABLED=1` y `LLM_API_KEY`; se leen de `python-api/
 
 ## Resultados del Sprint 6
 
-Los produjo el commit `860c942` y están en `results/<partición>/`: `metricas.json`, `informe.md` y las figuras `resumen`, `comparativa_f1` y `matriz_*`, en PNG y SVG.
+Los produjo el commit `db0739d` y están en `results/<partición>/`: `metricas.json`, `informe.md` y las figuras `resumen`, `comparativa_f1` y `matriz_*`, en PNG y SVG. Dos corridas sobre el mismo commit dan figuras idénticas byte a byte; solo cambia la fecha de generación en `metricas.json` e `informe.md`.
 
 **Examen** (44 tickets que el prompt v2 no vio): es la medición formal de HU-09.
 
@@ -89,6 +90,8 @@ Los produjo el commit `860c942` y están en `results/<partición>/`: `metricas.j
 | ≤ 0,9 | 4 de 44 (9 %) | 0 de 6 |
 | ≤ 0,95 | 43 de 44 (98 %) | 6 de 6 |
 | El modelo y las reglas discrepan | 22 de 44 (50 %) | 5 de 6 |
+
+Sobre los 66 el patrón es el mismo: con 0,9 van 6 a revisión (9 %) y no se atrapa ninguno de los 7 errores; la discrepancia manda 32 (48 %) y atrapa 6 de 7.
 
 **Decisión: se mantiene 0,5.**
 - Subirlo a 0,9 manda un 9 % de tickets a revisión sin atrapar ningún error. Los seis errores de v2 llegan con confianza 0,95, igual que los aciertos, así que la confianza que declara el modelo no distingue sus errores.

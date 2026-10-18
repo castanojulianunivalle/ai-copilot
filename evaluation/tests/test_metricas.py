@@ -29,6 +29,12 @@ def test_f1_ponderado_pesa_por_soporte():
     assert math.isclose(r.f1_ponderado, (0.5 * 2 + (2 / 3) * 1 + 0.0 * 1) / 4)
 
 
+def test_f1_micro_coincide_con_la_exactitud():
+    # 2 VP, 2 FP y 2 FN: cada error es un FP de la clase predicha y un FN de la real (AISCOP-58).
+    r = evaluar(["a", "a", "b", "c"], ["a", "b", "b", "a"], ETIQUETAS)
+    assert math.isclose(r.f1_micro, 2 * 2 / (2 * 2 + 2 + 2)) and math.isclose(r.f1_micro, r.exactitud)
+
+
 def test_etiqueta_fuera_de_la_taxonomia():
     with pytest.raises(ValueError):
         evaluar(["a"], ["z"], ETIQUETAS)

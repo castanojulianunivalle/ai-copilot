@@ -1,6 +1,6 @@
 {
-  "generado_en": "2026-10-18T01:08:22+00:00",
-  "commit": "860c942",
+  "generado_en": "2026-10-18T01:22:06+00:00",
+  "commit": "db0739d",
   "arbol_limpio": true,
   "particion": "examen",
   "fixture": "tickets_etiquetados.jsonl",
@@ -27,6 +27,7 @@
     "recall_macro": 0.5227,
     "f1_macro": 0.5156,
     "f1_ponderado": 0.5156,
+    "f1_micro": 0.5227,
     "etiquetas": [
       "Técnico",
       "Facturación",
@@ -276,6 +277,7 @@
         "recall_macro": 0.7955,
         "f1_macro": 0.7632,
         "f1_ponderado": 0.7632,
+        "f1_micro": 0.7955,
         "etiquetas": [
           "Técnico",
           "Facturación",
@@ -511,6 +513,7 @@
         "recall_macro": 0.5227,
         "f1_macro": 0.5156,
         "f1_ponderado": 0.5156,
+        "f1_micro": 0.5227,
         "etiquetas": [
           "Técnico",
           "Facturación",
@@ -769,6 +772,7 @@
         "recall_macro": 0.8636,
         "f1_macro": 0.8634,
         "f1_ponderado": 0.8634,
+        "f1_micro": 0.8636,
         "etiquetas": [
           "Técnico",
           "Facturación",
@@ -1004,6 +1008,7 @@
         "recall_macro": 0.5227,
         "f1_macro": 0.5156,
         "f1_ponderado": 0.5156,
+        "f1_micro": 0.5227,
         "etiquetas": [
           "Técnico",
           "Facturación",

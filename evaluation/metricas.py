@@ -7,8 +7,8 @@ Implementadas en Python puro y sin dependencias. Son tres razones:
    pueda compilar scikit-learn.
 2. Las formulas quedan a la vista y son citables en el articulo, en vez de
    escondidas tras una llamada de libreria.
-3. La correccion se verifica cruzando los resultados contra sklearn en
-   `verificar_contra_sklearn.py`, que si es opcional.
+3. La correccion se verifica contra scikit-learn y SciPy en
+   `tests/test_contra_sklearn.py`, que corre en la CI (AISCOP-47).
 
 Incluye la prueba de McNemar, que es la adecuada para comparar dos
 clasificadores evaluados sobre las MISMAS muestras: comparar dos intervalos de
@@ -81,6 +81,17 @@ class Resultado:
         return sum(m.f1 * m.soporte for m in self.por_clase.values()) / total
 
     @property
+    def f1_micro(self) -> float:
+        """Suma los VP, FP y FN de todas las clases antes de calcular. Con una sola
+        etiqueta por ticket cada error es a la vez un FP y un FN, asi que coincide
+        con la exactitud; se reporta porque la DoD de HU-09 lo pide (AISCOP-58)."""
+        vp = sum(m.vp for m in self.por_clase.values())
+        fp = sum(m.fp for m in self.por_clase.values())
+        fn = sum(m.fn for m in self.por_clase.values())
+        denominador = 2 * vp + fp + fn
+        return 2 * vp / denominador if denominador else 0.0
+
+    @property
     def precision_macro(self) -> float:
         if not self.por_clase:
             return 0.0
@@ -101,6 +112,7 @@ class Resultado:
             "recall_macro": round(self.recall_macro, 4),
             "f1_macro": round(self.f1_macro, 4),
             "f1_ponderado": round(self.f1_ponderado, 4),
+            "f1_micro": round(self.f1_micro, 4),
             "etiquetas": self.etiquetas,
             "matriz_confusion": self.matriz,
             "por_clase": {k: v.as_dict() for k, v in self.por_clase.items()},

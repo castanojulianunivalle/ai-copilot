@@ -170,7 +170,8 @@ def commit_actual() -> dict[str, Any]:
 def tabla_markdown(r: dict, titulo: str) -> str:
     lineas = [f"### {titulo}", "",
               f"- **Exactitud**: {r['exactitud']:.2%} ({r['aciertos']}/{r['n']})",
-              f"- **F1 macro**: {r['f1_macro']:.4f} · F1 ponderado {r['f1_ponderado']:.4f}",
+              f"- **F1 macro**: {r['f1_macro']:.4f} · F1 ponderado {r['f1_ponderado']:.4f} · "
+              f"F1 micro {r['f1_micro']:.4f} (igual a la exactitud con una etiqueta por ticket)",
               f"- **Precisión macro**: {r['precision_macro']:.4f} · **Recall macro**: {r['recall_macro']:.4f}",
               "", "| Categoría | Precisión | Recall | F1 | Soporte |", "|---|---:|---:|---:|---:|"]
     for etiqueta in r["etiquetas"]:
