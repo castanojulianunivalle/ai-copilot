@@ -1,0 +1,4 @@
+{"categoria": "Solicitudes", "confianza": 0.45, "id": "sonda-1", "justificacion": "Ticket muy breve, sin detalles.", "latencia_ms": 1336, "modelo": "openai/gpt-oss-20b@clasificacion-v2"}
+{"categoria": "Técnico", "confianza": 0.45, "id": "sonda-2", "justificacion": "Ticket muy vago, sin contexto, se interpreta como posible error técnico.", "latencia_ms": 1580, "modelo": "openai/gpt-oss-20b@clasificacion-v2"}
+{"categoria": "Técnico", "confianza": 0.45, "id": "sonda-3", "justificacion": "Ticket muy breve, indica fallo sin detalles.", "latencia_ms": 1671, "modelo": "openai/gpt-oss-20b@clasificacion-v2"}
+{"categoria": "Solicitudes", "confianza": 0.95, "id": "sonda-4", "justificacion": "Solicitud de llamada urgente.", "latencia_ms": 1734, "modelo": "openai/gpt-oss-20b@clasificacion-v2"}

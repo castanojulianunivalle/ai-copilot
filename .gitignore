@@ -39,3 +39,9 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Componente inteligente (Semestre 2)
+# Los datasets exportados NO se versionan aqui: los genera export_dataset.py y
+# pueden contener texto de clientes. Lo que si se versiona es
+# evaluation/results/, que son metricas agregadas y figuras.
+data/dataset/

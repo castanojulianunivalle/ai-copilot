@@ -1,0 +1,4 @@
+# Dependencias de la evaluación (Sprint 6), deliberadamente fuera de python-api/requirements.txt:
+# la imagen de la API no tiene por qué cargar matplotlib para servir tickets.
+# metricas.py y evaluate.py corren con la librería estándar; esto es solo para las figuras (--graficas).
+matplotlib>=3.8
