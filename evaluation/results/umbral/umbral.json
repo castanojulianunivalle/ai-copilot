@@ -1,0 +1,171 @@
+{
+  "commit": "b8f9c39",
+  "arbol_limpio": true,
+  "version": "clasificacion-v2",
+  "umbral_vigente": 0.5,
+  "practica": {
+    "n": 22,
+    "errores": 1,
+    "confianza_en_errores": [
+      0.95
+    ],
+    "confianza_minima_en_aciertos": 0.9,
+    "umbrales": [
+      {
+        "umbral": 0.5,
+        "a_revision": 0,
+        "carga": 0.0,
+        "errores_atrapados": 0,
+        "de_errores": 1
+      },
+      {
+        "umbral": 0.6,
+        "a_revision": 0,
+        "carga": 0.0,
+        "errores_atrapados": 0,
+        "de_errores": 1
+      },
+      {
+        "umbral": 0.7,
+        "a_revision": 0,
+        "carga": 0.0,
+        "errores_atrapados": 0,
+        "de_errores": 1
+      },
+      {
+        "umbral": 0.8,
+        "a_revision": 0,
+        "carga": 0.0,
+        "errores_atrapados": 0,
+        "de_errores": 1
+      },
+      {
+        "umbral": 0.85,
+        "a_revision": 0,
+        "carga": 0.0,
+        "errores_atrapados": 0,
+        "de_errores": 1
+      },
+      {
+        "umbral": 0.9,
+        "a_revision": 2,
+        "carga": 0.0909,
+        "errores_atrapados": 0,
+        "de_errores": 1
+      },
+      {
+        "umbral": 0.95,
+        "a_revision": 22,
+        "carga": 1.0,
+        "errores_atrapados": 1,
+        "de_errores": 1
+      }
+    ],
+    "senal_discrepancia_con_reglas": {
+      "a_revision": 10,
+      "carga": 0.4545,
+      "errores_atrapados": 1,
+      "de_errores": 1
+    }
+  },
+  "examen": {
+    "n": 44,
+    "errores": 6,
+    "confianza_en_errores": [
+      0.95,
+      0.95,
+      0.95,
+      0.95,
+      0.95,
+      0.95
+    ],
+    "confianza_minima_en_aciertos": 0.9,
+    "umbrales": [
+      {
+        "umbral": 0.5,
+        "a_revision": 0,
+        "carga": 0.0,
+        "errores_atrapados": 0,
+        "de_errores": 6
+      },
+      {
+        "umbral": 0.6,
+        "a_revision": 0,
+        "carga": 0.0,
+        "errores_atrapados": 0,
+        "de_errores": 6
+      },
+      {
+        "umbral": 0.7,
+        "a_revision": 0,
+        "carga": 0.0,
+        "errores_atrapados": 0,
+        "de_errores": 6
+      },
+      {
+        "umbral": 0.8,
+        "a_revision": 0,
+        "carga": 0.0,
+        "errores_atrapados": 0,
+        "de_errores": 6
+      },
+      {
+        "umbral": 0.85,
+        "a_revision": 0,
+        "carga": 0.0,
+        "errores_atrapados": 0,
+        "de_errores": 6
+      },
+      {
+        "umbral": 0.9,
+        "a_revision": 4,
+        "carga": 0.0909,
+        "errores_atrapados": 0,
+        "de_errores": 6
+      },
+      {
+        "umbral": 0.95,
+        "a_revision": 43,
+        "carga": 0.9773,
+        "errores_atrapados": 6,
+        "de_errores": 6
+      }
+    ],
+    "senal_discrepancia_con_reglas": {
+      "a_revision": 22,
+      "carga": 0.5,
+      "errores_atrapados": 5,
+      "de_errores": 6
+    }
+  },
+  "sondas": [
+    {
+      "id": "sonda-1",
+      "texto": "Consulta Hola, tengo una duda.",
+      "esperado": "revision",
+      "confianza": 0.45,
+      "a_revision": true
+    },
+    {
+      "id": "sonda-2",
+      "texto": "Ayuda No sé si esto es un error o si lo estoy haciendo mal, pero algo no cuadra.",
+      "esperado": "revision",
+      "confianza": 0.45,
+      "a_revision": true
+    },
+    {
+      "id": "sonda-3",
+      "texto": "Problema No funciona.",
+      "esperado": "revision",
+      "confianza": 0.45,
+      "a_revision": true
+    },
+    {
+      "id": "sonda-4",
+      "texto": "Urgente Necesito que me llamen hoy.",
+      "esperado": "revision",
+      "confianza": 0.95,
+      "a_revision": false
+    }
+  ]
+}
