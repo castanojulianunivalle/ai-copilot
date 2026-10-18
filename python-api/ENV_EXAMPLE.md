@@ -32,3 +32,15 @@ LLM_MAX_TOKENS=1500
 - **Nombres antiguos**: `HF_API_TOKEN`, `HF_MODEL` y `LLM_API_BASE_URL`, que generaba `setup-env.sh` en el Semestre 1, se aceptan como respaldo. Los `LLM_*` tienen prioridad.
 
 **Antes de una demostracion, abrir `/health`.** Debe decir `"llm_habilitado": true` y no traer advertencias. Si hay key pero falta `LLM_ENABLED=1`, la API arranca igual y clasifica solo con reglas: `/health` y el log de arranque lo avisan.
+
+---
+
+## Despliegue en la nube (Semestre 2 · Sprint 6 · HU-10)
+
+```
+CORS_ORIGINS=https://aiscop-web.onrender.com
+```
+
+- **CORS_ORIGINS**: origenes que pueden llamar a la API desde el navegador, separados por comas. En Render lleva la URL del frontend. Sin la variable queda abierto (`*`), como en local.
+- **RENDER_GIT_COMMIT**: no se configura. Render la inyecta en cada deploy, y `/health` la devuelve recortada en `commit`, junto a `version` (de `version.py`). Asi se comprueba que la nube corre el tag que se presenta. Fuera de Render se puede pasar `GIT_COMMIT`.
+- En Render, las llaves (`SUPABASE_SERVICE_ROLE_KEY`, `LLM_API_KEY`) viven en las variables del servicio, no en el repositorio. `deploy/render_nube.py` las fija sin imprimirlas. El procedimiento completo esta en `DEPLOY.md`.
