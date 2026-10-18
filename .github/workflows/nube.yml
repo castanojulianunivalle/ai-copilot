@@ -1,0 +1,52 @@
+# Pruebas contra la versión desplegada en la nube (HU-10 · AISCOP-57).
+# Corre todos los días y bajo demanda. Además de avisar si algo se cae, mantiene
+# activo el proyecto gratuito de Supabase, que se pausa tras 7 días sin uso.
+# Las URL y la llave anon son públicas (variables del repositorio); las
+# contraseñas de los usuarios de demostración van en secretos.
+name: Nube
+
+on:
+  schedule:
+    - cron: "0 13 * * *"            # 8:00 en Colombia
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Tag o commit que debe estar corriendo (opcional), p. ej. v2.0.0"
+        required: false
+        default: ""
+      completa:
+        description: "Incluir la aceptación de HU-06 (llama más veces al LLM)"
+        type: boolean
+        default: false
+
+jobs:
+  pruebas:
+    name: Pruebas en la nube
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0              # para resolver el tag que se pide verificar
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Humo y aceptación
+        env:
+          AISCOP_WEB_URL: ${{ vars.AISCOP_WEB_URL }}
+          AISCOP_API_URL: ${{ vars.AISCOP_API_URL }}
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
+          DEMO_CLIENTE_PASSWORD: ${{ secrets.DEMO_CLIENTE_PASSWORD }}
+          DEMO_AGENTE_PASSWORD: ${{ secrets.DEMO_AGENTE_PASSWORD }}
+          REF: ${{ inputs.ref }}
+          COMPLETA: ${{ inputs.completa }}
+        run: |
+          args="--solo-humo"
+          if [ "$COMPLETA" = "true" ]; then args=""; fi
+          if [ -n "$REF" ]; then args="$args --ref $REF"; fi
+          python deploy/pruebas_nube.py $args
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: evidencia-nube
+          path: deploy/evidencia/
