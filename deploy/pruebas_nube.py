@@ -1,7 +1,7 @@
 """
 HU-10 · AISCOP-57: pruebas de humo y de aceptacion contra la version desplegada en la nube.
 
-    python deploy/pruebas_nube.py                  # humo + aceptacion de HU-06 en la nube
+    python deploy/pruebas_nube.py                  # humo + aceptacion de HU-06 y HU-01 en la nube
     python deploy/pruebas_nube.py --solo-humo      # lo que corre el workflow diario
     python deploy/pruebas_nube.py --ref v2.0.0     # ademas exige que la nube corra el commit de ese tag
     python deploy/pruebas_nube.py --repliegue      # fuerza la caida del LLM en Render y comprueba el repliegue
@@ -17,7 +17,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
+import secrets
 import subprocess
 import sys
 import time
@@ -49,6 +51,7 @@ class Contexto:
         self.creados: list[str] = []
         self.casos: list[dict] = []
         self.salud: dict = {}
+        self.ticket_humo: str | None = None
 
 
 def commit_de(ref: str) -> str:
@@ -161,7 +164,18 @@ def humo(ctx: Contexto) -> None:
         motores = sorted(f["motor"] for f in log)
         ok = (t["clasificado_por"] == "llm" and t["category"] in CATEGORIAS and 0 <= (t["confianza_ia"] or -1) <= 1
               and len(fila) == 1 and fila[0]["category"] == t["category"] and motores == ["llm", "reglas"])
+        ctx.ticket_humo = t["ticket_id"]
         return f"{t['category']} · confianza {t['confianza_ia']} · el agente lo ve: {len(fila) == 1} · log {motores}", ok
+
+    @caso(ctx, "TC-H6", "El agente cambia el estado; el cliente no puede",
+          "PATCH del agente 200 y el cliente ve el ticket Cerrado (RLS: solo los suyos); PATCH del cliente 403")
+    def _():
+        ticket = ctx.ticket_humo
+        agente = estado_http(lambda: api(ctx, "PATCH", f"/tickets/{ticket}/estado?estado=Cerrado", "agente"))
+        cliente = estado_http(lambda: api(ctx, "PATCH", f"/tickets/{ticket}/estado?estado=Abierto", "cliente"))
+        visto = rest(ctx, f"tickets?id=eq.{ticket}&select=estado", "cliente")[1]
+        ok = agente == 200 and cliente == 403 and visto == [{"estado": "Cerrado"}]
+        return f"agente {agente} · cliente {cliente} · el cliente lo ve {visto[0]['estado'] if visto else 'sin acceso'}", ok
 
     @caso(ctx, "TC-H5", "Manejo de errores y permisos",
           "token invalido 401; agente creando ticket 403; sin sesion no se leen tickets ni la vista del dataset")
@@ -211,6 +225,32 @@ def aceptacion(ctx: Contexto) -> None:
         t = crear_ticket(ctx, "Consulta", "Hola, tengo una duda.")
         ok = t["clasificado_por"] == "llm" and t["confianza_ia"] <= UMBRAL_REVISION and t["requiere_revision"] is True
         return f"{t['category']} · confianza {t['confianza_ia']} · requiere_revision {t['requiere_revision']}", ok
+
+    @caso(ctx, "TC-A4", "HU-01 · registro de un cliente nuevo en la nube",
+          "el registro abre sesion con rol cliente; repetir el correo devuelve un error y no duplica")
+    def _():
+        correo = f"prueba.{int(time.time())}@aiscop.local"
+        clave = secrets.token_urlsafe(16)
+        alta = pedir("POST", f"{ctx.supabase}/auth/v1/signup", cabeceras={"apikey": ctx.anon},
+                     cuerpo={"email": correo, "password": clave})[1]
+        rol = api(ctx, "GET", "/me", token=alta["access_token"])[1]["role"]
+        repetido = estado_http(lambda: pedir("POST", f"{ctx.supabase}/auth/v1/signup", cabeceras={"apikey": ctx.anon},
+                                             cuerpo={"email": correo, "password": clave}, reintentos=0))
+        borrado = borrar_usuario(alta["user"]["id"])
+        ok = rol == "cliente" and repetido in (400, 422)
+        return f"rol {rol} · correo repetido {repetido} · usuario de prueba {'borrado' if borrado else 'conservado'}", ok
+
+
+def borrar_usuario(uid: str) -> bool:
+    """Borra el usuario de prueba con la llave de servicio, solo si hay token de la Management API (corrida local)."""
+    if not os.getenv("SUPABASE_ACCESS_TOKEN"):
+        return False
+    from nube_comun import llaves_supabase, proyecto_supabase
+
+    llaves = llaves_supabase(proyecto_supabase()["id"])
+    pedir("DELETE", f"{llaves['url']}/auth/v1/admin/users/{uid}", token=llaves["service_role"],
+          cabeceras={"apikey": llaves["service_role"]})
+    return True
 
 
 def repliegue(ctx: Contexto) -> None:
