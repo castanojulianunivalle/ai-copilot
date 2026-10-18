@@ -7,6 +7,8 @@ import { useAuth } from './contexts/AuthContext';
 import LoginRegister from './components/LoginRegister';
 import AdminUsers from './components/AdminUsers';
 import ResetPassword from './components/ResetPassword';
+import VersionInfo from './components/VersionInfo';
+import { API_URL } from './lib/api';
 
 type Ticket = {
   id: string;
@@ -68,8 +70,6 @@ const origenClasificacion = (ticket: Ticket) =>
   ticket.clasificado_por === 'llm'
     ? `IA · confianza ${formatoConfianza(ticket.confianza_ia)}`
     : 'Motor de reglas';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8001';
 
 type Notification = {
   id: string;
@@ -979,6 +979,7 @@ export default function App() {
             </>
           )}
         </AnimatePresence>
+        <VersionInfo />
       </main>
     </div>
   );

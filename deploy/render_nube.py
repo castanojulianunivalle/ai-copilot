@@ -1,5 +1,5 @@
 """
-HU-10 · AISCOP-54: los servicios de la demo en Render, declarados en codigo.
+HU-10 · AISCOP-54 y AISCOP-55: los servicios de la demo en Render, declarados en codigo.
 
     python deploy/render_nube.py plan                     # compara lo declarado con Render; no cambia nada
     python deploy/render_nube.py aplicar                  # crea lo que falte y fija las variables declaradas
@@ -28,8 +28,8 @@ from nube_comun import (REPO, RAIZ, ErrorAPI, leer_env_local, llaves_supabase, p
 RENDER = "https://api.render.com/v1"
 REGION = "virginia"          # Render en us-east, junto al Supabase de us-east-1
 RAMA = "main"
-API = "aiscop-api"
-SERVICIOS = (API,)
+API, WEB = "aiscop-api", "aiscop-web"
+SERVICIOS = (API, WEB)
 TERMINALES = {"live", "deactivated", "build_failed", "update_failed", "canceled", "pre_deploy_failed"}
 
 
@@ -54,9 +54,25 @@ def declarados(llaves: dict, urls: dict) -> list[dict]:
             "LLM_MAX_REINTENTOS": "2",
             "LLM_MAX_TOKENS": "1500",
             # Mientras el frontend no exista queda abierto; `aplicar` lo cierra en la segunda pasada.
-            "CORS_ORIGINS": urls.get("aiscop-web", "*"),
+            "CORS_ORIGINS": urls.get(WEB, "*"),
         },
         "secretas": {"SUPABASE_SERVICE_ROLE_KEY", "LLM_API_KEY"},
+    }, {
+        "nombre": WEB,
+        "crear": {"type": "static_site", "name": WEB, "repo": REPO, "branch": RAMA, "rootDir": "frontend",
+                  "autoDeploy": "no",
+                  "serviceDetails": {"buildCommand": "npm ci --no-audit --no-fund && npm run build",
+                                     "publishPath": "dist", "pullRequestPreviewsEnabled": "no"}},
+        # Vite incrusta estas variables al construir: no puede ir ninguna secreta. La anon es publica
+        # por diseno y la protegen las politicas RLS.
+        "variables": {
+            "VITE_SUPABASE_URL": llaves["url"],
+            "VITE_SUPABASE_ANON_KEY": llaves["anon"],
+            "VITE_API_URL": urls.get(API, ""),
+            "NODE_VERSION": "20",
+        },
+        # SPA: cualquier ruta que no sea un archivo sirve index.html (p. ej. el enlace de restablecer contrasena).
+        "rutas": [{"type": "rewrite", "source": "/*", "destination": "/index.html"}],
     }]
 
 

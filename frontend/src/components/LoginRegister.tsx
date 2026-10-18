@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { LogIn, UserPlus } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
+import VersionInfo from './VersionInfo';
 
 type Props = {
   onSignIn: (email: string, password: string) => Promise<{ error?: string }>;
@@ -176,6 +177,7 @@ export default function LoginRegister({ onSignIn, onSignUp, onResetPassword }: P
             )}
           </form>
         </div>
+        <VersionInfo />
       </motion.div>
     </div>
   );
