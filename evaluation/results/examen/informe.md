@@ -1,12 +1,12 @@
 # Evaluación de modelos — AI Support Co-Pilot
 
-> Sprint 6 · HU-09 · generado el 2026-10-18T01:08:22+00:00 · commit `860c942`
+> Sprint 6 · HU-09 · generado el 2026-10-18T01:22:06+00:00 · commit `db0739d`
 > Partición **examen** · 44 tickets · huella del conjunto `c69d84040663`
 
 ### Motor de reglas (línea base, Semestre 1)
 
 - **Exactitud**: 52.27% (23/44)
-- **F1 macro**: 0.5156 · F1 ponderado 0.5156
+- **F1 macro**: 0.5156 · F1 ponderado 0.5156 · F1 micro 0.5227 (igual a la exactitud con una etiqueta por ticket)
 - **Precisión macro**: 0.5773 · **Recall macro**: 0.5227
 
 | Categoría | Precisión | Recall | F1 | Soporte |
@@ -42,7 +42,7 @@
 ### LLM · clasificacion-v1 · openai/gpt-oss-20b@clasificacion-v1
 
 - **Exactitud**: 79.55% (35/44)
-- **F1 macro**: 0.7632 · F1 ponderado 0.7632
+- **F1 macro**: 0.7632 · F1 ponderado 0.7632 · F1 micro 0.7955 (igual a la exactitud con una etiqueta por ticket)
 - **Precisión macro**: 0.7535 · **Recall macro**: 0.7955
 
 | Categoría | Precisión | Recall | F1 | Soporte |
@@ -82,7 +82,7 @@ Latencia: mediana 4530 ms · p95 11034 ms · máx 12617 ms.
 ### LLM · clasificacion-v2 · openai/gpt-oss-20b@clasificacion-v2
 
 - **Exactitud**: 86.36% (38/44)
-- **F1 macro**: 0.8634 · F1 ponderado 0.8634
+- **F1 macro**: 0.8634 · F1 ponderado 0.8634 · F1 micro 0.8636 (igual a la exactitud con una etiqueta por ticket)
 - **Precisión macro**: 0.8974 · **Recall macro**: 0.8636
 
 | Categoría | Precisión | Recall | F1 | Soporte |

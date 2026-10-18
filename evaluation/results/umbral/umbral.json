@@ -1,5 +1,5 @@
 {
-  "commit": "b8f9c39",
+  "commit": "db0739d",
   "arbol_limpio": true,
   "version": "clasificacion-v2",
   "umbral_vigente": 0.5,
@@ -136,6 +136,77 @@
       "carga": 0.5,
       "errores_atrapados": 5,
       "de_errores": 6
+    }
+  },
+  "todo": {
+    "n": 66,
+    "errores": 7,
+    "confianza_en_errores": [
+      0.95,
+      0.95,
+      0.95,
+      0.95,
+      0.95,
+      0.95,
+      0.95
+    ],
+    "confianza_minima_en_aciertos": 0.9,
+    "umbrales": [
+      {
+        "umbral": 0.5,
+        "a_revision": 0,
+        "carga": 0.0,
+        "errores_atrapados": 0,
+        "de_errores": 7
+      },
+      {
+        "umbral": 0.6,
+        "a_revision": 0,
+        "carga": 0.0,
+        "errores_atrapados": 0,
+        "de_errores": 7
+      },
+      {
+        "umbral": 0.7,
+        "a_revision": 0,
+        "carga": 0.0,
+        "errores_atrapados": 0,
+        "de_errores": 7
+      },
+      {
+        "umbral": 0.8,
+        "a_revision": 0,
+        "carga": 0.0,
+        "errores_atrapados": 0,
+        "de_errores": 7
+      },
+      {
+        "umbral": 0.85,
+        "a_revision": 0,
+        "carga": 0.0,
+        "errores_atrapados": 0,
+        "de_errores": 7
+      },
+      {
+        "umbral": 0.9,
+        "a_revision": 6,
+        "carga": 0.0909,
+        "errores_atrapados": 0,
+        "de_errores": 7
+      },
+      {
+        "umbral": 0.95,
+        "a_revision": 65,
+        "carga": 0.9848,
+        "errores_atrapados": 7,
+        "de_errores": 7
+      }
+    ],
+    "senal_discrepancia_con_reglas": {
+      "a_revision": 32,
+      "carga": 0.4848,
+      "errores_atrapados": 6,
+      "de_errores": 7
     }
   },
   "sondas": [

@@ -1,6 +1,6 @@
 {
-  "generado_en": "2026-10-18T01:08:24+00:00",
-  "commit": "860c942",
+  "generado_en": "2026-10-18T01:22:09+00:00",
+  "commit": "db0739d",
   "arbol_limpio": true,
   "particion": "practica",
   "fixture": "tickets_etiquetados.jsonl",
@@ -27,6 +27,7 @@
     "recall_macro": 0.5455,
     "f1_macro": 0.5216,
     "f1_ponderado": 0.5216,
+    "f1_micro": 0.5455,
     "etiquetas": [
       "Técnico",
       "Facturación",
@@ -276,6 +277,7 @@
         "recall_macro": 0.8636,
         "f1_macro": 0.8545,
         "f1_ponderado": 0.8545,
+        "f1_micro": 0.8636,
         "etiquetas": [
           "Técnico",
           "Facturación",
@@ -511,6 +513,7 @@
         "recall_macro": 0.5455,
         "f1_macro": 0.5216,
         "f1_ponderado": 0.5216,
+        "f1_micro": 0.5455,
         "etiquetas": [
           "Técnico",
           "Facturación",
@@ -769,6 +772,7 @@
         "recall_macro": 0.9545,
         "f1_macro": 0.9515,
         "f1_ponderado": 0.9515,
+        "f1_micro": 0.9545,
         "etiquetas": [
           "Técnico",
           "Facturación",
@@ -1004,6 +1008,7 @@
         "recall_macro": 0.5455,
         "f1_macro": 0.5216,
         "f1_ponderado": 0.5216,
+        "f1_micro": 0.5455,
         "etiquetas": [
           "Técnico",
           "Facturación",
