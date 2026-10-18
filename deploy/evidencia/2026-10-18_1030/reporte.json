@@ -1,0 +1,95 @@
+{
+  "fecha_utc": "2026-10-18T15:30:45+00:00",
+  "fecha_colombia": "2026-10-18 10:30",
+  "modo": "humo y aceptacion con repliegue",
+  "web": "https://aiscop-web.onrender.com",
+  "api": "https://aiscop-api.onrender.com",
+  "ref": "v2.0.0",
+  "commit_esperado": "794fdb2858bca45f2518e99f0887410baa32fa4f",
+  "version_api": "2.0.0",
+  "commit_api": "794fdb2",
+  "aprobados": 10,
+  "total": 10,
+  "casos": [
+    {
+      "id": "TC-H1",
+      "caso": "Acceso a la aplicacion web",
+      "esperado": "200; el bundle apunta a la API de la nube y lleva el commit 794fdb2",
+      "obtenido": "index y bundle /assets/index-B6phpbNb.js; API de la nube en el bundle: True",
+      "estado": "Aprobado",
+      "duracion_ms": 1164
+    },
+    {
+      "id": "TC-H2",
+      "caso": "La API responde con la version prevista",
+      "esperado": "200; llm_habilitado true, sin advertencias; commit 794fdb2",
+      "obtenido": "version 2.0.0 · commit 794fdb2 · openai/gpt-oss-20b",
+      "estado": "Aprobado",
+      "duracion_ms": 229
+    },
+    {
+      "id": "TC-H3",
+      "caso": "Autenticacion de cliente y agente",
+      "esperado": "token de Supabase Auth; /me devuelve el rol de cada uno",
+      "obtenido": "/me: {'cliente': 'cliente', 'agente': 'agente'}",
+      "estado": "Aprobado",
+      "duracion_ms": 2458
+    },
+    {
+      "id": "TC-H4",
+      "caso": "Persistencia y servicio inteligente",
+      "esperado": "el ticket se crea clasificado por el LLM; el agente lo lee con categoría, tono, prioridad y confianza, y quedan las dos predicciones en el log",
+      "obtenido": "Facturación · Frustrado · prioridad Alta · confianza 0.95 · estado Abierto · el agente lo ve: True · log ['llm', 'reglas']",
+      "estado": "Aprobado",
+      "duracion_ms": 1718
+    },
+    {
+      "id": "TC-H6",
+      "caso": "El agente cambia el estado; el cliente no puede",
+      "esperado": "PATCH del agente 200 y el cliente ve el ticket Cerrado (RLS: solo los suyos); PATCH del cliente 403",
+      "obtenido": "agente 200 · cliente 403 · el cliente lo ve Cerrado",
+      "estado": "Aprobado",
+      "duracion_ms": 1376
+    },
+    {
+      "id": "TC-H5",
+      "caso": "Manejo de errores y permisos",
+      "esperado": "token invalido 401; agente creando ticket 403; sin sesion no se leen tickets ni la vista del dataset",
+      "obtenido": "token invalido 401 · agente 403 · anon tickets 401 · anon vista 401",
+      "estado": "Aprobado",
+      "duracion_ms": 1219
+    },
+    {
+      "id": "TC-A1",
+      "caso": "HU-06 · clasificacion con el modelo, igual que en local",
+      "esperado": "la nube da la misma categoria que la evaluacion local en 5 tickets de examen",
+      "obtenido": "5 de 5 iguales (ev-015: local Facturación / nube Facturación; ev-043: local Seguridad / nube Seguridad; ev-055: local Móvil / nube Móvil; ev-031: local Rendimiento / nube Rendimiento; ev-049: local Integraciones / nube Integraciones)",
+      "estado": "Aprobado",
+      "duracion_ms": 14384
+    },
+    {
+      "id": "TC-A2",
+      "caso": "HU-06 · revision humana con confianza baja",
+      "esperado": "un ticket sin informacion queda con confianza <= 0.5 y requiere_revision true",
+      "obtenido": "Solicitudes · confianza 0.45 · requiere_revision True",
+      "estado": "Aprobado",
+      "duracion_ms": 11209
+    },
+    {
+      "id": "TC-A4",
+      "caso": "HU-01 · registro de un cliente nuevo en la nube",
+      "esperado": "el registro abre sesion con rol cliente; repetir el correo devuelve un error y no duplica",
+      "obtenido": "rol cliente · correo repetido 422 · usuario de prueba borrado",
+      "estado": "Aprobado",
+      "duracion_ms": 2792
+    },
+    {
+      "id": "TC-A3",
+      "caso": "HU-06 · repliegue al motor de reglas cuando el LLM no responde",
+      "esperado": "con LLM_TIMEOUT=0.001 el ticket se crea igual, clasificado por reglas; al restaurar vuelve el LLM",
+      "obtenido": "caido: Facturación por reglas · restaurado: Facturación por llm · deploys live/live",
+      "estado": "Aprobado",
+      "duracion_ms": 100066
+    }
+  ]
+}
