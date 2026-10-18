@@ -175,10 +175,11 @@ def aplicar(_args) -> int:
 
 
 def fijar_ruta(servicio_id: str, regla: dict) -> None:
-    actuales = render("GET", f"/services/{servicio_id}/routes") or []
+    # El GET devuelve cada regla envuelta en {"route": ...}; el POST recibe una sola regla.
+    actuales = [f.get("route", f) for f in render("GET", f"/services/{servicio_id}/routes") or []]
     if any(r.get("source") == regla["source"] and r.get("destination") == regla["destination"] for r in actuales):
         return
-    render("POST", f"/services/{servicio_id}/routes", [regla])
+    render("POST", f"/services/{servicio_id}/routes", regla)
     print(f"   ruta {regla['type']} {regla['source']} -> {regla['destination']}")
 
 

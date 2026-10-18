@@ -2,4 +2,4 @@
 
 En develop lleva el sufijo -dev: una version sin sufijo solo existe en el commit que se etiqueta.
 """
-VERSION = "2.0.0-dev"
+VERSION = "2.0.0"
