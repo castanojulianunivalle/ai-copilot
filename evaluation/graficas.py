@@ -35,6 +35,7 @@ def _plt():
     matplotlib.use("Agg")                            # sin interfaz grafica: corre en CI y en servidor
     import matplotlib.pyplot as plt
 
+    plt.rcParams.update({"axes.formatter.use_locale": False})
     plt.rcParams.update({
         "font.family": "sans-serif", "font.size": 10, "axes.edgecolor": EJE, "axes.labelcolor": TINTA,
         "xtick.color": TINTA_SECUNDARIA, "ytick.color": TINTA, "axes.spines.top": False,
@@ -52,6 +53,12 @@ def _guardar(fig, base: Path) -> list[Path]:
 
 def _coma(x: float, d: int = 2) -> str:
     return f"{x:.{d}f}".replace(".", ",")
+
+
+def _formato_coma():
+    from matplotlib.ticker import FuncFormatter
+
+    return FuncFormatter(lambda v, _: _coma(v, 1) if v <= 1.0001 else "")
 
 
 def _series(res_reglas, resultados: dict) -> list[tuple[str, object, str, str | None]]:
@@ -78,6 +85,7 @@ def resumen(series, particion: str, n: int, destino: Path) -> list[Path]:
             ax.text(b.get_x() + b.get_width() / 2, v + 0.015, _coma(v), ha="center", fontsize=9, color=TINTA)
     ax.set_xticks(range(len(claves)), [t for _, t in claves])
     ax.set_ylim(0, 1.08)
+    ax.yaxis.set_major_formatter(_formato_coma())
     ax.yaxis.grid(True, color=REJILLA)
     ax.set_axisbelow(True)
     ax.legend(frameon=False, ncols=len(series), loc="lower left", bbox_to_anchor=(0, 1.0))
@@ -105,6 +113,7 @@ def comparativa_f1(series, destino: Path) -> list[Path]:
     ax.set_yticks(range(len(orden)), orden)
     ax.invert_yaxis()
     ax.set_xlim(0, 1.18)
+    ax.xaxis.set_major_formatter(_formato_coma())
     ax.set_xlabel("F1 por categoría")
     ax.xaxis.grid(True, color=REJILLA)
     ax.set_axisbelow(True)
