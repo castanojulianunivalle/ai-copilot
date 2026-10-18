@@ -1,0 +1,5 @@
+# Pruebas de la evaluación (CI): python -m pytest -q evaluation/tests
+# scikit-learn y SciPy solo se usan para verificar metricas.py; la evaluación no los necesita.
+pytest>=8
+scikit-learn>=1.4
+scipy>=1.11

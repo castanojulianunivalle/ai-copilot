@@ -1,0 +1,4 @@
+{"id": "sonda-1", "texto": "Consulta Hola, tengo una duda.", "esperado": "revision", "nota": "Caso F-10 de las pruebas funcionales del Avance 2"}
+{"id": "sonda-2", "texto": "Ayuda No sé si esto es un error o si lo estoy haciendo mal, pero algo no cuadra.", "esperado": "revision", "nota": "Caso F-11 de las pruebas funcionales del Avance 2"}
+{"id": "sonda-3", "texto": "Problema No funciona.", "esperado": "revision", "nota": "Sin decir qué no funciona"}
+{"id": "sonda-4", "texto": "Urgente Necesito que me llamen hoy.", "esperado": "revision", "nota": "Pide contacto sin decir el motivo"}
