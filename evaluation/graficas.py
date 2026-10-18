@@ -40,6 +40,8 @@ def _plt():
         "font.family": "sans-serif", "font.size": 10, "axes.edgecolor": EJE, "axes.labelcolor": TINTA,
         "xtick.color": TINTA_SECUNDARIA, "ytick.color": TINTA, "axes.spines.top": False,
         "axes.spines.right": False, "savefig.dpi": 200, "savefig.bbox": "tight", "savefig.facecolor": "white",
+        # Ids fijos en el SVG: sin esto cada corrida cambia el archivo aunque la figura sea la misma.
+        "svg.hashsalt": "aiscop-hu09",
     })
     return plt
 
@@ -47,7 +49,8 @@ def _plt():
 def _guardar(fig, base: Path) -> list[Path]:
     rutas = [base.with_suffix(".png"), base.with_suffix(".svg")]
     for ruta in rutas:
-        fig.savefig(ruta)
+        # Sin fecha en los metadatos, por la misma razon: una figura solo cambia si cambian los datos.
+        fig.savefig(ruta, metadata={"Date": None} if ruta.suffix == ".svg" else None)
     return rutas
 
 
