@@ -14,12 +14,20 @@ Reglas de diseño aplicadas:
 4. Contrato de salida JSON estricto, sin prosa alrededor.
 5. Se le pide declarar confianza baja en vez de adivinar, para poder enrutar a
    revision humana los casos dudosos.
+
+Version 2 (Sprint 6, AISCOP-50). Se ajusto mirando SOLO la particion de
+practica del conjunto etiquetado, donde la v1 fallo en tres pares: Movil frente
+a UX/UI, Integraciones frente a Solicitudes y Rendimiento frente a Tecnico. La
+v1 ademas declaraba 0.90 a 0.97 de confianza tambien en sus errores, asi que la
+revision humana nunca se activaba; la v2 le da al modelo una escala para que la
+confianza distinga lo claro de lo dudoso. Los dos ejemplos nuevos no salen del
+conjunto etiquetado.
 """
 from __future__ import annotations
 
 from .taxonomia import CATEGORIAS, PRIORIDADES, SENTIMIENTOS
 
-VERSION_PROMPT = "clasificacion-v1"
+VERSION_PROMPT = "clasificacion-v2"
 
 # Los pares que mas se confunden. Se derivan de mirar donde falla el motor de
 # reglas del Semestre 1: comparten palabras clave y el if/else se queda con la
@@ -31,12 +39,19 @@ Distinciones que importan (son los pares que mas se confunden):
 - Facturación vs Comercial: "Facturación" es un cobro ya ocurrido (factura,
   reembolso, cargo duplicado). "Comercial" es antes de comprar (precio, plan,
   cotización).
-- Técnico vs Rendimiento: "Rendimiento" es que funciona pero lento. "Técnico"
-  es que no funciona (error, caída, dato incorrecto).
+- Técnico vs Rendimiento: "Rendimiento" es que funciona pero lento, incluido
+  lo que "se queda cargando", "nunca termina" o se demora con mucho volumen.
+  "Técnico" es que falla con un error explícito o da un resultado incorrecto.
 - Solicitudes vs UX/UI: "Solicitudes" pide algo que no existe todavía. "UX/UI"
   se queja de algo que existe y estorba.
-- Integraciones vs Técnico: "Integraciones" solo si el problema está en la
-  frontera con un sistema externo (API, webhook, Slack).
+- Integraciones vs Técnico y Solicitudes: "Integraciones" cuando el problema o
+  el cambio pedido está en la conexión con otro sistema (API, webhook, n8n,
+  Zapier, Slack, payload, sincronización), aunque esté redactado como petición.
+- Móvil vs UX/UI y Técnico: "Móvil" si el problema lo causa el dispositivo o
+  la app móvil (la app de Android o iOS, el teclado del teléfono,
+  notificaciones, permisos, instalación). Si la queja es del diseño de la
+  interfaz (algo que no cabe, un botón mal ubicado), es "UX/UI" aunque se note
+  en el celular.
 - Seguridad: prevalece sobre cualquier otra si hay phishing, fraude, acceso no
   autorizado o fuga de datos, aunque el ticket también hable de otra cosa.
 
@@ -88,6 +103,38 @@ _EJEMPLOS = [
             "justificacion": "Intento de phishing: Seguridad prevalece aunque mencione contraseña (Acceso).",
         },
     ),
+    (
+        "Las notificaciones de la app de Android no me llegan aunque tengo los "
+        "permisos activados.",
+        {
+            "categoria": "Móvil",
+            "sentimiento": "Neutral",
+            "prioridad": "Media",
+            "confianza": 0.9,
+            "justificacion": "Falla propia de la app móvil y sus permisos, no del diseño ni del servidor.",
+        },
+    ),
+    (
+        "Desde el navegador del teléfono el menú tapa la mitad del formulario.",
+        {
+            "categoria": "UX/UI",
+            "sentimiento": "Neutral",
+            "prioridad": "Media",
+            "confianza": 0.8,
+            "justificacion": "Queja del diseño de la interfaz; que se note en el celular no la vuelve Móvil.",
+        },
+    ),
+    (
+        "¿Pueden mandar también el número del ticket en el webhook que nos llega a "
+        "Slack? Hoy toca buscarlo a mano.",
+        {
+            "categoria": "Integraciones",
+            "sentimiento": "Neutral",
+            "prioridad": "Baja",
+            "confianza": 0.85,
+            "justificacion": "Pide un cambio en la conexión con Slack: Integraciones, aunque suene a solicitud.",
+        },
+    ),
 ]
 
 
@@ -124,9 +171,12 @@ si es una consulta informativa o una sugerencia. "Media" en los demás casos.
 Formato de salida — solo este JSON, sin texto antes ni después, sin ```:
 {{"categoria": "...", "sentimiento": "...", "prioridad": "...", "confianza": 0.0, "justificacion": "..."}}
 
-- "confianza": número entre 0 y 1. Si el ticket es ambiguo o le falta
-  información, baja la confianza en lugar de adivinar con seguridad falsa.
-  Un valor por debajo de 0.5 marca el ticket para revisión humana.
+- "confianza": número entre 0 y 1, según esta escala:
+  0.90 o más solo si el ticket es claro y no encaja en ninguna otra categoría;
+  entre 0.60 y 0.85 si dudaste entre dos categorías por las distinciones de
+  arriba; menos de 0.50 si al ticket le falta información para decidir.
+  Los valores bajos envían el ticket a revisión humana, así que no adivines
+  con seguridad falsa.
 - "justificacion": una sola frase, máximo 20 palabras, en español.
 
 Ejemplos:

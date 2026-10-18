@@ -37,6 +37,17 @@ Un repliegue a reglas nunca se guarda como predicción del modelo.
 | Versión | Origen |
 |---|---|
 | `clasificacion-v1` | Corrida del 5 de octubre de 2026 con gpt-oss-20b en Groq: los 66 tickets, sin repliegues. Es la que se presentó en el Avance 2. |
+| `clasificacion-v2` | Prompt del Sprint 6 (AISCOP-50), congelado el 17 de octubre. Corrió sobre práctica mientras se ajustaba y una sola vez sobre examen. |
+
+### Cómo se ajustó el prompt v2 (AISCOP-50)
+
+1. Se miraron solo los errores de v1 en **práctica**, que fueron 3 de 22. Los tres caían en los pares Rendimiento/Técnico, Integraciones/Solicitudes y Móvil/UX-UI, y por ellos se agregaron distinciones al prompt.
+2. **Borrador 1.** Sacó 21 de 22, pero metió un error nuevo: «Móvil prevalece» se llevó un ticket cuya nota de anotación dice «la queja es de diseño, no del dispositivo».
+3. **Borrador 2.** Recogió ese criterio: Móvil cuando lo causa el dispositivo o la app; UX/UI cuando es el diseño. Sacó 21 de 22.
+4. **Borrador 3.** Redefinió Solicitudes y también sacó 21 de 22, pero desvió un ticket de **Seguridad**, la clase crítica. Por eso **se congeló el borrador 2.**
+5. Con el prompt congelado se corrió **una sola vez** el examen.
+
+Las predicciones de los tres borradores quedan en `results/cache/borradores/`, como registro del ajuste. También queda ahí una corrida de control de v1 del 17 de octubre: mide la latencia del proveedor ese día con el prompt anterior, para no atribuirle a v2 una mejora que no es suya.
 
 ## Cómo se corre
 
