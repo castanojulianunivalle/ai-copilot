@@ -3,7 +3,7 @@ HU-10 · AISCOP-53: el proyecto de Supabase de la demo, reproducible desde el re
 
     python deploy/supabase_nube.py estado                # que hay en la nube; no cambia nada
     python deploy/supabase_nube.py crear                 # crea el proyecto si no existe y espera a que este sano
-    python deploy/supabase_nube.py migrar                # aplica en orden las migraciones pendientes
+    python deploy/supabase_nube.py migrar [--hasta V]    # aplica en orden las migraciones pendientes (hasta V)
     python deploy/supabase_nube.py auth --sitio URL      # Auth apunta al frontend de Render
     python deploy/supabase_nube.py usuarios              # usuarios de demostracion con su rol
 
@@ -100,12 +100,15 @@ def crear(_args) -> int:
     return 0
 
 
-def migrar(_args) -> int:
+def migrar(args) -> int:
     ref = exigir_proyecto()["id"]
     sql(ref, BITACORA)
     aplicadas = {f["version"] for f in sql(ref, "select version from supabase_migrations.schema_migrations")}
     for ruta in sorted(MIGRACIONES.glob("*.sql")):
         version, _, nombre = ruta.stem.partition("_")
+        if args.hasta and version > args.hasta:
+            print(f"se deja pendiente {ruta.name} (--hasta {args.hasta})")
+            continue
         if version in aplicadas:
             print(f"ya aplicada {ruta.name}")
             continue
@@ -156,8 +159,12 @@ def usuarios(_args) -> int:
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description="Proyecto de Supabase de la demo")
     sub = parser.add_subparsers(dest="comando", required=True)
-    for nombre, fn in (("estado", estado), ("crear", crear), ("migrar", migrar), ("usuarios", usuarios)):
+    for nombre, fn in (("estado", estado), ("crear", crear), ("usuarios", usuarios)):
         sub.add_parser(nombre).set_defaults(fn=fn)
+    p = sub.add_parser("migrar")
+    p.add_argument("--hasta", help="aplica solo hasta esa versión (p. ej. 20260924000000), para verificar una migración "
+                                   "con evidencia de antes y después")
+    p.set_defaults(fn=migrar)
     p = sub.add_parser("auth")
     p.add_argument("--sitio", required=True, help="URL publica del frontend")
     p.set_defaults(fn=auth)
