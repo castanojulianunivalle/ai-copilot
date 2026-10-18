@@ -1,8 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8001';
+import { API_URL } from '../lib/api';
 
 type Profile = { id: string; role: 'cliente' | 'agente' | 'administrador' };
 
