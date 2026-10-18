@@ -79,6 +79,24 @@ Los produjo el commit `860c942` y están en `results/<partición>/`: `metricas.j
 - **Latencia:** bajó en la misma medida para v1. Una corrida de control del 17 de octubre lo confirma, así que es el proveedor y no el prompt.
 - **Todo** (66): v2 89,4 % y F1 0,897. Incluye la práctica, sobre la que se ajustó, así que no es la cifra que se reporta.
 
+## Umbral de revisión humana (AISCOP-51)
+
+`umbral.py` compara umbrales de 0,5 a 0,95: los elige mirando práctica y los reporta en examen. Además corre cuatro sondas sin información suficiente (`fixtures/sondas_revision.jsonl`). Resultados en `results/umbral/`.
+
+| Umbral | Examen: a revisión | Errores atrapados |
+|---:|---:|---:|
+| ≤ 0,5 (vigente) | 0 de 44 | 0 de 6 |
+| ≤ 0,9 | 4 de 44 (9 %) | 0 de 6 |
+| ≤ 0,95 | 43 de 44 (98 %) | 6 de 6 |
+| El modelo y las reglas discrepan | 22 de 44 (50 %) | 5 de 6 |
+
+**Decisión: se mantiene 0,5.**
+- Subirlo a 0,9 manda un 9 % de tickets a revisión sin atrapar ningún error. Los seis errores de v2 llegan con confianza 0,95, igual que los aciertos, así que la confianza que declara el modelo no distingue sus errores.
+- El umbral sí cumple el propósito para el que existe: tres de las cuatro sondas (consultas sin contexto, como «Hola, tengo una duda») salen con confianza 0,45 y van a revisión.
+- La cuarta sonda, «Urgente: necesito que me llamen hoy», sale como Solicitudes con 0,95. Para el modelo la intención es clara.
+
+La señal de discrepancia con las reglas atrapa casi todos los errores, pero con la mitad de los tickets en revisión. Queda como trabajo descubierto en el Product Backlog.
+
 ## Validez
 
 **Lo que garantiza el montaje:**
