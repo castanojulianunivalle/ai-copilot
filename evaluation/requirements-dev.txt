@@ -1,0 +1,2 @@
+# Pruebas de la evaluación (CI): python -m pytest -q evaluation/tests
+pytest>=8
