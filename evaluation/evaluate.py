@@ -155,7 +155,9 @@ def commit_actual() -> dict[str, Any]:
     try:
         sha = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=RAIZ, capture_output=True,
                              text=True, check=True).stdout.strip()
-        sucio = subprocess.run(["git", "status", "--porcelain", "--", "evaluation", "python-api/ai"], cwd=RAIZ,
+        # Los resultados que este mismo script va escribiendo no cuentan como cambios del codigo.
+        sucio = subprocess.run(["git", "status", "--porcelain", "--", "evaluation", "python-api/ai",
+                                ":(exclude)evaluation/results"], cwd=RAIZ,
                                capture_output=True, text=True, check=True).stdout.strip()
         return {"commit": sha, "arbol_limpio": not sucio}
     except (OSError, subprocess.CalledProcessError):

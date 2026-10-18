@@ -61,6 +61,24 @@ python -m pytest -q evaluation/tests                 # pruebas
 
 Con `--llm` hacen falta `LLM_ENABLED=1` y `LLM_API_KEY`; se leen de `python-api/.env`. Los resultados quedan en `results/<partición>/metricas.json` e `informe.md`. Cada `metricas.json` registra el commit que lo produjo y si el árbol estaba limpio.
 
+## Resultados del Sprint 6
+
+Los produjo el commit `860c942` y están en `results/<partición>/`: `metricas.json`, `informe.md` y las figuras `resumen`, `comparativa_f1` y `matriz_*`, en PNG y SVG.
+
+**Examen** (44 tickets que el prompt v2 no vio): es la medición formal de HU-09.
+
+| Motor | Exactitud | F1 macro | McNemar contra reglas | Latencia mediana · p95 |
+|---|---:|---:|---|---|
+| Reglas | 52,3 % | 0,516 | — | instantánea |
+| LLM v1 | 79,5 % | 0,763 | 4 frente a 16 · p = 0,012 | 4,5 s · 11,0 s (5 de octubre) |
+| **LLM v2** | **86,4 %** | **0,863** | **2 frente a 17 · p = 0,0007** | **1,0 s · 1,6 s** (17 de octubre) |
+
+- **Regla de decisión del Evento 1** (F1 mayor y p < 0,05): se cumple con v1 y con v2.
+- **v2 frente a v1:** +6,8 puntos y +0,100 de F1, pero no significativo con 44 tickets (2 frente a 5, p = 0,45).
+- **Por categoría:** Móvil pasa de F1 0 a 0,667. Seguridad (recall 1,00 → 0,75) y Facturación bajan por un ticket cada una: un pago con error que v2 manda a Técnico y una consulta de cumplimiento legal que manda a Solicitudes.
+- **Latencia:** bajó en la misma medida para v1. Una corrida de control del 17 de octubre lo confirma, así que es el proveedor y no el prompt.
+- **Todo** (66): v2 89,4 % y F1 0,897. Incluye la práctica, sobre la que se ajustó, así que no es la cifra que se reporta.
+
 ## Validez
 
 **Lo que garantiza el montaje:**
