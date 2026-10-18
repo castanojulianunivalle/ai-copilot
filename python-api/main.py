@@ -25,6 +25,7 @@ from ai.llm_client import ConfigLLM
 # Reexportado: el motor de reglas vive en ai.reglas para que el script de
 # evaluacion (Sprint 6) lo importe sin arrastrar FastAPI ni Supabase.
 from ai.reglas import classify_with_rules
+from version import VERSION
 
 logging.basicConfig(
     level=logging.INFO,
@@ -41,11 +42,28 @@ logger.info("Clasificacion con LLM: %s", _config_llm.estado())
 for _aviso in _config_llm.advertencias():
     logger.warning(_aviso)
 
-app = FastAPI(title="Mesa de Ayuda - Support Co-Pilot")
+def origenes_cors() -> list:
+    """Origenes que pueden llamar a la API desde el navegador (HU-10).
+
+    En la nube CORS_ORIGINS lleva la URL del frontend de Render, separada por
+    comas si hay varias. Sin la variable queda abierto, como en local.
+    """
+    valor = os.getenv("CORS_ORIGINS", "")
+    return [o.strip().rstrip("/") for o in valor.split(",") if o.strip()] or ["*"]
+
+
+def commit_desplegado() -> str:
+    """Commit que esta corriendo. Render inyecta RENDER_GIT_COMMIT en cada deploy;
+    GIT_COMMIT sirve para `docker run` u otro proveedor."""
+    return (os.getenv("RENDER_GIT_COMMIT") or os.getenv("GIT_COMMIT") or "local")[:7]
+
+
+app = FastAPI(title="Mesa de Ayuda - Support Co-Pilot", version=VERSION)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=origenes_cors(),
+    # El frontend se autentica con el header Authorization, no con cookies.
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -204,7 +222,9 @@ def health():
     # Se lee en cada llamada: asi refleja el entorno real del despliegue, que es
     # lo que hay que comprobar antes de una demostracion.
     config = ConfigLLM.desde_entorno()
-    return {"status": "ok", "clasificacion": {**config.estado(), "advertencias": config.advertencias()}}
+    # version y commit atan lo que corre en la nube a un tag y a un commit de main (HU-10).
+    return {"status": "ok", "version": VERSION, "commit": commit_desplegado(),
+            "clasificacion": {**config.estado(), "advertencias": config.advertencias()}}
 
 
 @app.get("/me", response_model=dict)
