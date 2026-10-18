@@ -48,6 +48,7 @@ def test_metricas_iguales_a_sklearn(nombre, y_real, y_pred):
         assert abs(m.f1 - f1[i]) < TOLERANCIA and m.soporte == soporte[i]
     assert abs(r.f1_macro - sk.f1_score(y_real, y_pred, labels=ETIQUETAS, average="macro", zero_division=0)) < TOLERANCIA
     assert abs(r.f1_ponderado - sk.f1_score(y_real, y_pred, labels=ETIQUETAS, average="weighted", zero_division=0)) < TOLERANCIA
+    assert abs(r.f1_micro - sk.f1_score(y_real, y_pred, labels=ETIQUETAS, average="micro", zero_division=0)) < TOLERANCIA
 
 
 @pytest.mark.parametrize("b,c", [(5, 24), (4, 16), (2, 17), (2, 5), (1, 8), (0, 9), (3, 3), (0, 1), (10, 30)])

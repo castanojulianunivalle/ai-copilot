@@ -6,7 +6,8 @@ Un ticket va a revision humana cuando la confianza que declara el modelo no supe
 
 1. Cual umbral separa mejor los errores del modelo: para cada umbral cuenta cuantos tickets van a
    revision y cuantos de los errores atrapa. Se elige mirando la particion de practica y se reporta
-   sobre la de examen. Tambien mide una senal alternativa: que el modelo y las reglas discrepen.
+   sobre la de examen y sobre los 66 (AISCOP-58). Tambien mide una senal alternativa: que el modelo
+   y las reglas discrepen.
 2. Si el umbral sigue cumpliendo su proposito: los tickets sin informacion suficiente
    (fixtures/sondas_revision.jsonl) deben quedar marcados para revision.
 
@@ -31,6 +32,7 @@ from particion import cargar, filtrar  # noqa: E402
 from ai.parser import CONFIANZA_REVISION_HUMANA  # noqa: E402
 
 UMBRALES = [0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95]
+TITULOS = {"practica": "Práctica", "examen": "Examen", "todo": "Los 66 (práctica y examen)"}
 SONDAS = AQUI / "fixtures" / "sondas_revision.jsonl"
 CACHE_SONDAS = E.CACHE / "sondas"
 DESTINO = E.RESULTADOS / "umbral"
@@ -94,6 +96,7 @@ def main(argv=None) -> int:
         **E.commit_actual(), "version": args.version, "umbral_vigente": CONFIANZA_REVISION_HUMANA,
         "practica": tabla_umbrales(filtrar(todas, "practica"), cache),
         "examen": tabla_umbrales(filtrar(todas, "examen"), cache),
+        "todo": tabla_umbrales(todas, cache),
         "sondas": sondas(args.llm, args.version),
     }
     DESTINO.mkdir(parents=True, exist_ok=True)
@@ -101,9 +104,9 @@ def main(argv=None) -> int:
 
     lineas = [f"# Umbral de revisión humana — {args.version}", "",
               f"> Sprint 6 · AISCOP-51 · commit `{resultado['commit']}` · umbral vigente {CONFIANZA_REVISION_HUMANA}", ""]
-    for particion in ("practica", "examen"):
+    for particion, titulo in TITULOS.items():
         t = resultado[particion]
-        lineas += [f"## {particion.capitalize()} ({t['n']} tickets, {t['errores']} errores del modelo)", "",
+        lineas += [f"## {titulo}: {t['n']} tickets, {t['errores']} errores del modelo", "",
                    f"Confianza en los errores: {t['confianza_en_errores']} · mínima en los aciertos: "
                    f"{t['confianza_minima_en_aciertos']}", "",
                    "| Umbral | A revisión | Carga | Errores atrapados |", "|---:|---:|---:|---:|"]
