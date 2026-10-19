@@ -111,3 +111,18 @@ La señal de discrepancia con las reglas atrapa casi todos los errores, pero con
 - **n es pequeño:** 66 tickets, 44 de examen. Alcanza para detectar diferencias grandes, no las pequeñas.
 - **Anotador único:** no hay índice Kappa.
 - **El conjunto es sintético y balanceado:** el resultado vale para este conjunto, no como predicción de producción.
+
+## Señal de revisión de HU-11 (Sprint 7)
+
+HU-11 pedía una señal que atrapara al menos 4 de los 6 errores del examen sin mandar a revisión más del 25 % de los tickets. Se midieron dos candidatas sobre las predicciones guardadas del prompt v2:
+
+| Señal | Examen: a revisión | Errores atrapados |
+|---|---:|---:|
+| El modelo y las reglas discrepan | 22 de 44 (50 %) | 5 de 6 |
+| Discrepan y las reglas no dicen «Técnico» (su categoría por defecto) | 10 de 44 (23 %) | 2 de 6 |
+
+**Ninguna cumple la meta, y no se activan.** La revisión humana sigue saliendo de dos motivos que sí se justifican y que ahora quedan guardados en `tickets.motivo_revision` (`python-api/ai/revision.py`):
+- `confianza_baja`: la confianza del modelo es de 0,5 o menos.
+- `urgente_sin_detalle`: el ticket es urgente y tiene menos de 10 palabras. En el examen no manda ningún ticket, porque todos tienen 11 palabras o más, y atrapa la sonda «Urgente: necesito que me llamen hoy», que salía con confianza 0,95.
+
+Atrapar errores con confianza alta exigiría una segunda opinión del modelo; queda como idea para cuando el conjunto tenga más tickets.
