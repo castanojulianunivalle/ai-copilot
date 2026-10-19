@@ -40,6 +40,7 @@ def percentiles(valores: list[int]) -> dict:
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description="Evaluacion del examen contra la API desplegada")
     parser.add_argument("--pausa", type=float, default=3.0, help="segundos entre tickets (limite de Groq)")
+    parser.add_argument("--espera-final", type=float, default=0, help="segundos a esperar la reclasificación (HU-12)")
     args = parser.parse_args(argv)
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
@@ -52,7 +53,7 @@ def main(argv=None) -> int:
     print(f"API {api}: version {salud.get('version')} · commit {salud.get('commit')} · {salud['clasificacion'].get('modelo')}")
 
     filas = filtrar(cargar(), "examen")
-    predicciones, creados = [], []
+    predicciones, creados, finales = [], [], {}
     inicio_corrida = datetime.now(timezone.utc)
     try:
         for i, f in enumerate(filas, 1):
@@ -72,6 +73,18 @@ def main(argv=None) -> int:
             print(f"{i:2}/{len(filas)} {f['id']}: {p.get('categoria', 'ERROR')} ({p.get('clasificado_por', p.get('error'))}) "
                   f"{p['latencia_ms']} ms")
             time.sleep(args.pausa)
+        # HU-12: los que cayeron a reglas se reclasifican en segundo plano; se espera y se lee su estado final.
+        pendientes = [p for p in predicciones if p.get("clasificado_por") == "reglas"]
+        if pendientes and args.espera_final:
+            print(f"{len(pendientes)} tickets en reglas; espera de {args.espera_final} s para la reclasificación")
+            time.sleep(args.espera_final)
+            ids = {c: p["id"] for c, p in zip(creados, [x for x in predicciones if x.get("ok")])}
+            for ticket_id, ev_id in ids.items():
+                fila = pedir("GET", f"{supabase}/rest/v1/tickets?id=eq.{ticket_id}&select=category,clasificado_por,"
+                                    "confianza_ia,reclasificar", token=token,
+                             cabeceras={"apikey": variable("SUPABASE_ANON_KEY")})[1]
+                if fila:
+                    finales[ev_id] = fila[0]
     finally:
         borrados = 0
         for ticket_id in creados:
@@ -111,6 +124,15 @@ def main(argv=None) -> int:
         "coincidencia_con_local": {"iguales": len(comparables) - len(distintas), "de": len(comparables), "distintas": distintas},
         "mcnemar_local_vs_nube": mcnemar(local_ok, nube_ok),
     }
+    if finales:
+        fin = [finales.get(f["id"], {}).get("category", por_id[f["id"]].get("categoria")) for f in validas]
+        res_fin = evaluar(y_real, fin, etiquetas)
+        resultado["despues_de_reclasificar"] = {
+            "en_reglas_al_final": sum(1 for v in finales.values() if v.get("clasificado_por") == "reglas"),
+            "pendientes": sum(1 for v in finales.values() if v.get("reclasificar")),
+            "exactitud": round(res_fin.exactitud, 4), "f1_macro": round(res_fin.f1_macro, 4),
+            "iguales_a_local": sum(1 for f, c in zip(validas, fin) if c == local.get(f["id"], {}).get("categoria"))}
+        print("Después de reclasificar:", resultado["despues_de_reclasificar"])
     DESTINO.mkdir(parents=True, exist_ok=True)
     (DESTINO / "metricas.json").write_text(json.dumps(resultado, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     with (DESTINO / "predicciones.jsonl").open("w", encoding="utf-8", newline="\n") as salida:

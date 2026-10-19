@@ -15,7 +15,7 @@ import httpx
 import jwt
 from dotenv import load_dotenv
 from jwcrypto import jwk, jws
-from fastapi import FastAPI, HTTPException, Depends, Header
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from supabase import create_client, Client
@@ -25,6 +25,7 @@ from ai.llm_client import ConfigLLM
 # Reexportado: el motor de reglas vive en ai.reglas para que el script de
 # evaluacion (Sprint 6) lo importe sin arrastrar FastAPI ni Supabase.
 from ai.reglas import classify_with_rules
+from ai.revision import motivo_revision
 from version import VERSION
 
 logging.basicConfig(
@@ -93,10 +94,16 @@ def get_supabase() -> Optional[Client]:
     return create_client(url, key)
 
 
-def _campos_clasificacion(resultado: ResultadoClasificacion) -> dict:
+def _campos_clasificacion(resultado: ResultadoClasificacion, texto: str) -> dict:
     """Traduce el resultado a las columnas desnormalizadas de `tickets`."""
     c = resultado.clasificacion
+    confianza = c.confianza if resultado.uso_ia else None
     return {
+        # HU-11: por que va a revision humana (None si no hace falta o si clasificaron las reglas).
+        "motivo_revision": motivo_revision(texto, c.sentimiento, c.prioridad, confianza,
+                                           resultado.uso_ia and c.requiere_revision),
+        # HU-12: el proveedor fallo o limito; se reclasifica en segundo plano.
+        "reclasificar": debe_reclasificar(resultado),
         "category": c.categoria,
         "sentimiento": c.sentimiento,
         "prioridad": c.prioridad,
@@ -105,6 +112,36 @@ def _campos_clasificacion(resultado: ResultadoClasificacion) -> dict:
         "confianza_ia": c.confianza if resultado.uso_ia else None,
         "clasificado_por": resultado.motor,
     }
+
+
+def debe_reclasificar(resultado: ResultadoClasificacion) -> bool:
+    """HU-12: el LLM estaba habilitado pero fallo (429, timeout, respuesta ilegible) y clasificaron las reglas."""
+    return not resultado.uso_ia and resultado.error is not None
+
+
+def reclasificar_ticket(ticket_id: str, texto: str) -> bool:
+    """HU-12 · AISCOP-65: vuelve a clasificar con el modelo un ticket que cayo a reglas.
+
+    Corre en segundo plano, despues de responder al cliente. Espera antes de cada intento para no
+    sumarse al pico que provoco el 429 (el plan gratuito de Groq limita los tokens por minuto). Si el
+    modelo responde, actualiza el ticket, registra la prediccion del LLM y apaga la marca; si no, la
+    marca queda y el ticket se reprocesa con POST /tickets/reclasificar-pendientes.
+    """
+    espera = float(os.getenv("RECLASIFICAR_ESPERA_S", "20"))
+    intentos = int(os.getenv("RECLASIFICAR_INTENTOS", "3"))
+    supabase = get_supabase()
+    if not supabase:
+        return False
+    for intento in range(intentos):
+        time.sleep(espera * (intento + 1))
+        resultado = clasificar(texto, classify_with_rules)
+        if resultado.uso_ia:
+            supabase.table("tickets").update(_campos_clasificacion(resultado, texto)).eq("id", ticket_id).execute()
+            _registrar_clasificacion(supabase, ticket_id, texto, resultado)
+            logger.info("Ticket %s reclasificado con el LLM en el intento %d", ticket_id, intento + 1)
+            return True
+    logger.warning("Ticket %s sigue pendiente de reclasificar tras %d intentos", ticket_id, intentos)
+    return False
 
 
 def _registrar_clasificacion(supabase, ticket_id: str, texto: str, resultado: ResultadoClasificacion) -> None:
@@ -235,7 +272,7 @@ def get_me(auth: Tuple[str, str] = Depends(_verify_token)):
 
 
 @app.post("/create-ticket", response_model=dict)
-def create_ticket(ticket: TicketIn, auth: Tuple[str, str] = Depends(_verify_token)):
+def create_ticket(ticket: TicketIn, tareas: BackgroundTasks, auth: Tuple[str, str] = Depends(_verify_token)):
     user_id, role = auth
     if role != "cliente":
         raise HTTPException(status_code=403, detail="Solo clientes pueden crear tickets")
@@ -249,8 +286,8 @@ def create_ticket(ticket: TicketIn, auth: Tuple[str, str] = Depends(_verify_toke
 
     texto = f"{ticket.titulo} {ticket.description}"
     # Clasificacion sincrona: la respuesta lleva ya la categoria de la IA, y el
-    # timeout + fallback a reglas acotan el peor caso. Cuando Realtime entre en
-    # el Sprint 7, esto puede pasar a BackgroundTasks y refrescarse solo.
+    # timeout + fallback a reglas acotan el peor caso. Si el proveedor fallo o
+    # limito, el ticket se reclasifica despues en segundo plano (HU-12).
     resultado = clasificar(texto, classify_with_rules)
 
     ticket_data = {
@@ -258,7 +295,7 @@ def create_ticket(ticket: TicketIn, auth: Tuple[str, str] = Depends(_verify_toke
         "description": ticket.description,
         "estado": "Abierto",
         "created_by": user_id if user_id != "dev-user" else None,
-        **_campos_clasificacion(resultado),
+        **_campos_clasificacion(resultado, texto),
     }
     result = supabase.table("tickets").insert(ticket_data).execute()
 
@@ -267,6 +304,8 @@ def create_ticket(ticket: TicketIn, auth: Tuple[str, str] = Depends(_verify_toke
 
     ticket_id = result.data[0]["id"]
     _registrar_clasificacion(supabase, ticket_id, texto, resultado)
+    if ticket_data["reclasificar"]:
+        tareas.add_task(reclasificar_ticket, ticket_id, texto)
 
     clasificacion = resultado.clasificacion
     return {
@@ -277,8 +316,25 @@ def create_ticket(ticket: TicketIn, auth: Tuple[str, str] = Depends(_verify_toke
         "prioridad": clasificacion.prioridad,
         "confianza_ia": clasificacion.confianza if resultado.uso_ia else None,
         "clasificado_por": resultado.motor,
-        "requiere_revision": resultado.uso_ia and clasificacion.requiere_revision,
+        "requiere_revision": ticket_data["motivo_revision"] is not None,
+        "motivo_revision": ticket_data["motivo_revision"],
+        "reclasificar": ticket_data["reclasificar"],
     }
+
+
+@app.post("/tickets/reclasificar-pendientes", response_model=dict)
+def reclasificar_pendientes(limite: int = 20, auth: Tuple[str, str] = Depends(_verify_token)):
+    """HU-12 · AISCOP-66: reprocesa los tickets que siguen marcados (por ejemplo, tras reiniciar la API)."""
+    _, role = auth
+    if role not in ("agente", "administrador"):
+        raise HTTPException(status_code=403, detail="Solo agentes pueden reclasificar")
+    supabase = get_supabase()
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Supabase no configurado")
+    pendientes = (supabase.table("tickets").select("id, titulo, description").eq("reclasificar", True)
+                  .limit(min(limite, 50)).execute().data or [])
+    hechos = sum(reclasificar_ticket(t["id"], f"{t['titulo']} {t['description']}") for t in pendientes)
+    return {"pendientes": len(pendientes), "reclasificados": hechos}
 
 
 @app.put("/tickets/{ticket_id}", response_model=dict)
@@ -313,7 +369,7 @@ def update_ticket(ticket_id: str, ticket: TicketUpdateIn, auth: Tuple[str, str] 
         titulo = ticket.titulo if ticket.titulo is not None else existing.data[0].get("titulo", "")
         texto = f"{titulo} {ticket.description}"
         resultado = clasificar(texto, classify_with_rules)
-        update_data.update(_campos_clasificacion(resultado))
+        update_data.update(_campos_clasificacion(resultado, texto))
     if ticket.estado is not None:
         if ticket.estado not in ALLOWED_ESTADOS:
             raise HTTPException(status_code=400, detail="estado debe ser Abierto o Cerrado")

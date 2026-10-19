@@ -22,6 +22,9 @@ type Ticket = {
   prioridad?: string | null;
   confianza_ia?: number | null;
   clasificado_por?: string | null;
+  // HU-11 y HU-12: por qué va a revisión y si espera reclasificarse con el modelo.
+  motivo_revision?: string | null;
+  reclasificar?: boolean | null;
 };
 
 const estadoColor = (estado: string) => {
@@ -58,10 +61,19 @@ const prioridadColor = (prioridad: string) => {
 // inclusivo: un 0,5 lo revisa una persona.
 const UMBRAL_REVISION = 0.5;
 
-const requiereRevision = (ticket: Ticket) =>
-  ticket.clasificado_por === 'llm' &&
-  ticket.confianza_ia != null &&
-  Number(ticket.confianza_ia) <= UMBRAL_REVISION;
+// HU-11: la API guarda el motivo; los tickets anteriores al Sprint 7 no lo tienen y se deduce de la confianza.
+const motivoRevision = (ticket: Ticket): string | null =>
+  ticket.motivo_revision ??
+  (ticket.clasificado_por === 'llm' && ticket.confianza_ia != null && Number(ticket.confianza_ia) <= UMBRAL_REVISION
+    ? 'confianza_baja'
+    : null);
+
+const requiereRevision = (ticket: Ticket) => motivoRevision(ticket) !== null;
+
+const textoMotivo = (ticket: Ticket) =>
+  motivoRevision(ticket) === 'urgente_sin_detalle'
+    ? 'Requiere revisión humana: es urgente pero no describe el problema.'
+    : `Requiere revisión humana: la confianza del modelo está en el umbral (${formatoConfianza(UMBRAL_REVISION)}) o por debajo.`;
 
 const formatoConfianza = (confianza: number | null | undefined) =>
   confianza == null ? '' : Number(confianza).toLocaleString('es-CO', { maximumFractionDigits: 2 });
@@ -689,7 +701,7 @@ export default function App() {
                   <p><strong>Clasificado por:</strong> {origenClasificacion(selectedTicket)}</p>
                   {requiereRevision(selectedTicket) && (
                     <p className="text-sm px-3 py-2 rounded border bg-yellow-400/20 text-yellow-800 dark:text-yellow-300 border-yellow-500/50">
-                      Requiere revisión humana: la confianza del modelo está en el umbral ({formatoConfianza(UMBRAL_REVISION)}) o por debajo.
+                      {textoMotivo(selectedTicket)}
                     </p>
                   )}
                   <p><strong>Estado:</strong> <span className={`px-2 py-0.5 rounded text-xs border ${estadoColor(selectedTicket.estado)}`}>{selectedTicket.estado}</span></p>
