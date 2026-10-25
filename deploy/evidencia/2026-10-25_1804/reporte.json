@@ -1,0 +1,103 @@
+{
+  "fecha_utc": "2026-10-25T23:04:46+00:00",
+  "fecha_colombia": "2026-10-25 18:04",
+  "modo": "humo y aceptacion",
+  "web": "https://aiscop-web.onrender.com",
+  "api": "https://aiscop-api.onrender.com",
+  "ref": "v2.2.0",
+  "commit_esperado": "d8b70fb19d8a18757ca763eb37dd0bd5bf4647f0",
+  "version_api": "2.2.0",
+  "commit_api": "d8b70fb",
+  "aprobados": 11,
+  "total": 11,
+  "casos": [
+    {
+      "id": "TC-H1",
+      "caso": "Acceso a la aplicacion web",
+      "esperado": "200; el bundle apunta a la API de la nube y lleva el commit d8b70fb",
+      "obtenido": "index y bundle /assets/index-DbMDjI51.js; API de la nube en el bundle: True",
+      "estado": "Aprobado",
+      "duracion_ms": 1119
+    },
+    {
+      "id": "TC-H2",
+      "caso": "La API responde con la version prevista",
+      "esperado": "200; llm_habilitado true, sin advertencias; commit d8b70fb",
+      "obtenido": "version 2.2.0 · commit d8b70fb · openai/gpt-oss-20b",
+      "estado": "Aprobado",
+      "duracion_ms": 268
+    },
+    {
+      "id": "TC-H3",
+      "caso": "Autenticacion de cliente y agente",
+      "esperado": "token de Supabase Auth; /me devuelve el rol de cada uno",
+      "obtenido": "/me: {'cliente': 'cliente', 'agente': 'agente'}",
+      "estado": "Aprobado",
+      "duracion_ms": 2061
+    },
+    {
+      "id": "TC-H4",
+      "caso": "Persistencia y servicio inteligente",
+      "esperado": "el ticket se crea clasificado por el LLM; el agente lo lee con categoría, tono, prioridad y confianza, y quedan las dos predicciones en el log",
+      "obtenido": "Facturación · Frustrado · prioridad Alta · confianza 0.95 · estado Abierto · el agente lo ve: True · log ['llm', 'reglas']",
+      "estado": "Aprobado",
+      "duracion_ms": 1386
+    },
+    {
+      "id": "TC-H6",
+      "caso": "El agente cambia el estado; el cliente no puede",
+      "esperado": "PATCH del agente 200 y el cliente ve el ticket Cerrado (RLS: solo los suyos); PATCH del cliente 403",
+      "obtenido": "agente 200 · cliente 403 · el cliente lo ve Cerrado",
+      "estado": "Aprobado",
+      "duracion_ms": 1416
+    },
+    {
+      "id": "TC-H5",
+      "caso": "Manejo de errores y permisos",
+      "esperado": "token invalido 401; agente creando ticket 403; sin sesion no se leen tickets ni la vista del dataset",
+      "obtenido": "token invalido 401 · agente 403 · anon tickets 401 · anon vista 401",
+      "estado": "Aprobado",
+      "duracion_ms": 969
+    },
+    {
+      "id": "TC-A1",
+      "caso": "HU-06 · clasificacion con el modelo, igual que en local",
+      "esperado": "la nube da la misma categoria que la evaluacion local en 5 tickets de examen",
+      "obtenido": "5 de 5 iguales (ev-015: local Facturación / nube Facturación; ev-043: local Seguridad / nube Seguridad; ev-055: local Móvil / nube Móvil; ev-031: local Rendimiento / nube Rendimiento; ev-049: local Integraciones / nube Integraciones)",
+      "estado": "Aprobado",
+      "duracion_ms": 5640
+    },
+    {
+      "id": "TC-A2",
+      "caso": "HU-06 · revision humana con confianza baja",
+      "esperado": "un ticket sin informacion queda con confianza <= 0.5 y requiere_revision true",
+      "obtenido": "Solicitudes · confianza 0.45 · requiere_revision True",
+      "estado": "Aprobado",
+      "duracion_ms": 1423
+    },
+    {
+      "id": "TC-A4",
+      "caso": "HU-01 · registro de un cliente nuevo en la nube",
+      "esperado": "el registro abre sesion con rol cliente; repetir el correo devuelve un error y no duplica",
+      "obtenido": "rol cliente · correo repetido 422 · usuario de prueba borrado",
+      "estado": "Aprobado",
+      "duracion_ms": 2502
+    },
+    {
+      "id": "TC-A5",
+      "caso": "HU-13 · un ticket solo lo toma un agente",
+      "esperado": "el primer agente lo toma (200); el segundo recibe 409 y no puede liberarlo (403); queda asignado al primero",
+      "obtenido": "primer agente 200 · segundo agente 409 · liberar ajeno 403 · asignado al primero True",
+      "estado": "Aprobado",
+      "duracion_ms": 3951
+    },
+    {
+      "id": "TC-A6",
+      "caso": "HU-13 · comentarios, notas internas y estado con mensaje",
+      "esperado": "el cliente ve la respuesta y el mensaje del cambio de estado, nunca la nota interna, y no puede escribir notas",
+      "obtenido": "eventos: cliente 3 / agente 4 · el cliente ve la nota interna False · nota escrita por el cliente 403 · estado En proceso",
+      "estado": "Aprobado",
+      "duracion_ms": 4182
+    }
+  ]
+}
