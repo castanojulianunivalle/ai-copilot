@@ -3,6 +3,7 @@ Mesa de Ayuda - Support Co-Pilot
 Backend FastAPI. Clasificación por reglas (Semestre 1) + LLM (Semestre 2).
 HU-01: Auth con roles | HU-02/03/04: CRUD y clasificación | Admin: gestión de usuarios.
 HU-06: Clasificación con LLM | HU-09: Sentimiento y priorización automática.
+HU-13: atención por agentes (tomar, liberar y reasignar tickets; comentarios e historial).
 """
 import json
 import logging
@@ -15,7 +16,7 @@ import httpx
 import jwt
 from dotenv import load_dotenv
 from jwcrypto import jwk, jws
-from fastapi import BackgroundTasks, FastAPI, HTTPException, Depends, Header
+from fastapi import BackgroundTasks, Body, FastAPI, HTTPException, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from supabase import create_client, Client
@@ -69,7 +70,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-ALLOWED_ESTADOS = {"Abierto", "Cerrado"}
+# HU-13: «En proceso» le dice al cliente que un agente ya está trabajando su caso.
+ALLOWED_ESTADOS = {"Abierto", "En proceso", "Cerrado"}
+ROLES_STAFF = ("agente", "administrador")
+MAX_COMENTARIO = 2000
 
 class TicketIn(BaseModel):
     titulo: str
@@ -84,6 +88,21 @@ class TicketUpdateIn(BaseModel):
 
 class RoleUpdateIn(BaseModel):
     role: str
+
+
+class ComentarioIn(BaseModel):
+    texto: str
+    # Nota interna: solo la ven los agentes. El cliente nunca puede crearla.
+    interno: bool = False
+
+
+class AsignarIn(BaseModel):
+    agente_id: str
+
+
+class CambioEstadoIn(BaseModel):
+    # Opcional: explica el cambio y queda en el historial, visible para el cliente.
+    comentario: Optional[str] = None
 
 
 def get_supabase() -> Optional[Client]:
@@ -371,8 +390,10 @@ def update_ticket(ticket_id: str, ticket: TicketUpdateIn, auth: Tuple[str, str] 
         resultado = clasificar(texto, classify_with_rules)
         update_data.update(_campos_clasificacion(resultado, texto))
     if ticket.estado is not None:
+        if role not in ROLES_STAFF:
+            raise HTTPException(status_code=403, detail="Solo agentes pueden cambiar el estado")
         if ticket.estado not in ALLOWED_ESTADOS:
-            raise HTTPException(status_code=400, detail="estado debe ser Abierto o Cerrado")
+            raise HTTPException(status_code=400, detail=f"estado debe ser uno de: {', '.join(sorted(ALLOWED_ESTADOS))}")
         update_data["estado"] = ticket.estado
 
     if not update_data:
@@ -382,29 +403,197 @@ def update_ticket(ticket_id: str, ticket: TicketUpdateIn, auth: Tuple[str, str] 
 
     if resultado is not None:
         _registrar_clasificacion(supabase, ticket_id, texto, resultado)
+    antes = existing.data[0].get("estado")
+    if ticket.estado is not None and ticket.estado != antes:
+        _registrar_evento(supabase, ticket_id, user_id, "estado", estado_antes=antes, estado_despues=ticket.estado)
 
     return {"message": "Ticket actualizado", "ticket_id": ticket_id}
 
 
+# ---- HU-13: atención por agentes ----
+def _exigir_ticket(supabase, ticket_id: str) -> dict:
+    existing = supabase.table("tickets").select("*").eq("id", ticket_id).execute()
+    if not existing.data:
+        raise HTTPException(status_code=404, detail="Ticket no encontrado")
+    return existing.data[0]
+
+
+def _ahora() -> str:
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+
+def _registrar_evento(supabase, ticket_id: str, autor_id: str, tipo: str, **campos) -> None:
+    """Deja el cambio en ticket_eventos. Si falla no se revierte la acción: el historial es secundario."""
+    fila = {"ticket_id": ticket_id, "autor_id": autor_id if autor_id != "dev-user" else None, "tipo": tipo, **campos}
+    try:
+        supabase.table("ticket_eventos").insert(fila).execute()
+    except Exception as e:  # noqa: BLE001
+        logger.warning("No se pudo registrar el evento %s del ticket %s: %s", tipo, ticket_id, e)
+
+
+def _asignar(supabase, ticket: dict, agente_id: Optional[str], autor_id: str) -> None:
+    supabase.table("tickets").update({"asignado_a": agente_id, "asignado_en": _ahora() if agente_id else None}) \
+        .eq("id", ticket["id"]).execute()
+    _registrar_evento(supabase, ticket["id"], autor_id, "asignacion",
+                      asignado_antes=ticket.get("asignado_a"), asignado_despues=agente_id)
+
+
 @app.patch("/tickets/{ticket_id}/estado", response_model=dict)
-def update_estado(ticket_id: str, estado: str, auth: Tuple[str, str] = Depends(_verify_token)):
-    """Endpoint rápido para que el agente o administrador cambie el estado (Abierto/Cerrado)."""
-    _, role = auth
-    if role not in ("agente", "administrador"):
+def update_estado(ticket_id: str, estado: str, cuerpo: Optional[CambioEstadoIn] = Body(None),
+                  auth: Tuple[str, str] = Depends(_verify_token)):
+    """El agente o administrador cambia el estado, opcionalmente con un comentario para el cliente.
+
+    Pasar a «En proceso» un ticket sin dueño lo asigna a quien lo cambia: no tiene sentido que alguien esté
+    trabajando un caso que figura como libre.
+    """
+    user_id, role = auth
+    if role not in ROLES_STAFF:
         raise HTTPException(status_code=403, detail="Solo agentes pueden cambiar el estado")
     if estado not in ALLOWED_ESTADOS:
-        raise HTTPException(status_code=400, detail="estado debe ser Abierto o Cerrado")
+        raise HTTPException(status_code=400, detail=f"estado debe ser uno de: {', '.join(sorted(ALLOWED_ESTADOS))}")
+    comentario = (cuerpo.comentario or "").strip() if cuerpo else ""
+    if len(comentario) > MAX_COMENTARIO:
+        raise HTTPException(status_code=400, detail=f"El comentario admite hasta {MAX_COMENTARIO} caracteres")
 
     supabase = get_supabase()
     if not supabase:
         raise HTTPException(status_code=500, detail="Supabase no configurado")
-
-    existing = supabase.table("tickets").select("*").eq("id", ticket_id).execute()
-    if not existing.data or len(existing.data) == 0:
-        raise HTTPException(status_code=404, detail="Ticket no encontrado")
+    ticket = _exigir_ticket(supabase, ticket_id)
 
     supabase.table("tickets").update({"estado": estado}).eq("id", ticket_id).execute()
-    return {"ticket_id": ticket_id, "estado": estado}
+    if estado != ticket.get("estado") or comentario:
+        _registrar_evento(supabase, ticket_id, user_id, "estado", estado_antes=ticket.get("estado"),
+                          estado_despues=estado, texto=comentario or None)
+    asignado = ticket.get("asignado_a")
+    if estado == "En proceso" and not asignado and user_id != "dev-user":
+        _asignar(supabase, ticket, user_id, user_id)
+        asignado = user_id
+    return {"ticket_id": ticket_id, "estado": estado, "asignado_a": asignado}
+
+
+@app.post("/tickets/{ticket_id}/tomar", response_model=dict)
+def tomar_ticket(ticket_id: str, auth: Tuple[str, str] = Depends(_verify_token)):
+    """El agente toma un ticket libre. La condición «asignado_a is null» va en el mismo UPDATE: si dos agentes lo
+    toman a la vez, la base acepta solo uno y el otro recibe 409."""
+    user_id, role = auth
+    if role not in ROLES_STAFF:
+        raise HTTPException(status_code=403, detail="Solo agentes pueden tomar tickets")
+    supabase = get_supabase()
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Supabase no configurado")
+    ticket = _exigir_ticket(supabase, ticket_id)
+    if ticket.get("asignado_a") == user_id:
+        return {"ticket_id": ticket_id, "asignado_a": user_id}
+    if ticket.get("estado") == "Cerrado":
+        raise HTTPException(status_code=409, detail="El ticket está cerrado")
+
+    tomado = (supabase.table("tickets").update({"asignado_a": user_id, "asignado_en": _ahora()})
+              .eq("id", ticket_id).is_("asignado_a", "null").execute())
+    if not tomado.data:
+        raise HTTPException(status_code=409, detail="Otro agente ya tomó este ticket")
+    _registrar_evento(supabase, ticket_id, user_id, "asignacion", asignado_antes=None, asignado_despues=user_id)
+    return {"ticket_id": ticket_id, "asignado_a": user_id}
+
+
+@app.post("/tickets/{ticket_id}/liberar", response_model=dict)
+def liberar_ticket(ticket_id: str, auth: Tuple[str, str] = Depends(_verify_token)):
+    """Devuelve el ticket a la cola. Lo puede hacer el agente que lo tiene o un administrador."""
+    user_id, role = auth
+    if role not in ROLES_STAFF:
+        raise HTTPException(status_code=403, detail="Solo agentes pueden liberar tickets")
+    supabase = get_supabase()
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Supabase no configurado")
+    ticket = _exigir_ticket(supabase, ticket_id)
+    if not ticket.get("asignado_a"):
+        return {"ticket_id": ticket_id, "asignado_a": None}
+    if ticket["asignado_a"] != user_id and role != "administrador":
+        raise HTTPException(status_code=403, detail="Solo quien tiene el ticket o un administrador puede liberarlo")
+    _asignar(supabase, ticket, None, user_id)
+    return {"ticket_id": ticket_id, "asignado_a": None}
+
+
+@app.post("/tickets/{ticket_id}/asignar", response_model=dict)
+def asignar_ticket(ticket_id: str, body: AsignarIn, auth: Tuple[str, str] = Depends(_verify_token)):
+    """El administrador asigna o reasigna el ticket a un agente."""
+    user_id, role = auth
+    if role != "administrador":
+        raise HTTPException(status_code=403, detail="Solo administradores pueden reasignar")
+    supabase = get_supabase()
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Supabase no configurado")
+    ticket = _exigir_ticket(supabase, ticket_id)
+    destino = supabase.table("profiles").select("id, role").eq("id", body.agente_id).execute().data
+    if not destino or destino[0].get("role") not in ROLES_STAFF:
+        raise HTTPException(status_code=400, detail="El destino debe ser un agente")
+    if ticket.get("asignado_a") != body.agente_id:
+        _asignar(supabase, ticket, body.agente_id, user_id)
+    return {"ticket_id": ticket_id, "asignado_a": body.agente_id}
+
+
+@app.post("/tickets/{ticket_id}/comentarios", response_model=dict)
+def comentar_ticket(ticket_id: str, body: ComentarioIn, auth: Tuple[str, str] = Depends(_verify_token)):
+    """Comentario en el ticket. El agente responde al cliente o deja una nota interna; el cliente responde en sus
+    propios tickets y nunca puede escribir notas internas."""
+    user_id, role = auth
+    texto = body.texto.strip()
+    if not texto:
+        raise HTTPException(status_code=400, detail="El comentario no puede estar vacío")
+    if len(texto) > MAX_COMENTARIO:
+        raise HTTPException(status_code=400, detail=f"El comentario admite hasta {MAX_COMENTARIO} caracteres")
+    supabase = get_supabase()
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Supabase no configurado")
+    ticket = _exigir_ticket(supabase, ticket_id)
+    if role not in ROLES_STAFF:
+        if ticket.get("created_by") != user_id:
+            raise HTTPException(status_code=403, detail="Solo puedes comentar tus propios tickets")
+        if body.interno:
+            raise HTTPException(status_code=403, detail="Las notas internas son solo para agentes")
+    _registrar_evento(supabase, ticket_id, user_id, "comentario", texto=texto, interno=body.interno)
+    return {"ticket_id": ticket_id, "interno": body.interno}
+
+
+@app.get("/tickets/{ticket_id}/eventos", response_model=list)
+def eventos_ticket(ticket_id: str, auth: Tuple[str, str] = Depends(_verify_token)):
+    """Historial del ticket, del más antiguo al más reciente, con el correo y el rol de cada persona.
+    El cliente solo ve sus tickets y nunca las notas internas."""
+    user_id, role = auth
+    supabase = get_supabase()
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Supabase no configurado")
+    ticket = _exigir_ticket(supabase, ticket_id)
+    staff = role in ROLES_STAFF
+    if not staff and ticket.get("created_by") != user_id:
+        raise HTTPException(status_code=403, detail="Solo puedes ver tus propios tickets")
+    consulta = supabase.table("ticket_eventos").select("*").eq("ticket_id", ticket_id).order("created_at")
+    if not staff:
+        consulta = consulta.eq("interno", False)
+    eventos = consulta.execute().data or []
+    ids = {e[k] for e in eventos for k in ("autor_id", "asignado_antes", "asignado_despues") if e.get(k)}
+    perfiles = {p["id"]: p for p in (supabase.table("profiles").select("id, email, role").in_("id", list(ids))
+                                     .execute().data or [])} if ids else {}
+
+    def quien(uid):
+        if not uid:
+            return None
+        p = perfiles.get(uid) or {}
+        return {"id": uid, "email": p.get("email"), "role": p.get("role")}
+
+    return [{**e, "autor": quien(e.get("autor_id")), "asignado_antes": quien(e.get("asignado_antes")),
+             "asignado_despues": quien(e.get("asignado_despues"))} for e in eventos]
+
+
+@app.get("/agentes", response_model=list)
+def listar_agentes(auth: Tuple[str, str] = Depends(_verify_token)):
+    """Agentes y administradores, para mostrar quién atiende cada ticket y para reasignar."""
+    _, role = auth
+    if role not in ROLES_STAFF:
+        raise HTTPException(status_code=403, detail="Solo agentes")
+    supabase = get_supabase()
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Supabase no configurado")
+    return supabase.table("profiles").select("id, email, role").in_("role", list(ROLES_STAFF)).execute().data or []
 
 
 @app.delete("/tickets/{ticket_id}")

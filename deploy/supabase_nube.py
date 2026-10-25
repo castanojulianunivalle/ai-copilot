@@ -26,7 +26,9 @@ from nube_comun import RAIZ, PROYECTO_SUPABASE, ErrorAPI, llaves_supabase, pedir
 REGION = "us-east-1"
 MIGRACIONES = RAIZ / "supabase" / "migrations"
 USUARIOS_DEMO = [("cliente.demo@aiscop.local", "cliente", "DEMO_CLIENTE_PASSWORD"),
-                 ("agente.demo@aiscop.local", "agente", "DEMO_AGENTE_PASSWORD")]
+                 ("agente.demo@aiscop.local", "agente", "DEMO_AGENTE_PASSWORD"),
+                 # HU-13: un segundo agente para demostrar la toma de tickets sin choques
+                 ("agente2.demo@aiscop.local", "agente", "DEMO_AGENTE_PASSWORD")]
 BITACORA = """
 create schema if not exists supabase_migrations;
 create table if not exists supabase_migrations.schema_migrations (

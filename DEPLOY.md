@@ -37,7 +37,7 @@ Son públicos por diseño: las URL y la llave anon de Supabase, que viaja en el 
 export SUPABASE_ACCESS_TOKEN=...          # token personal de Supabase
 export RENDER_API_KEY=...                 # llave de la API de Render
 python deploy/supabase_nube.py crear      # proyecto aiscop-demo en us-east-1
-python deploy/supabase_nube.py migrar     # las cuatro migraciones, registradas
+python deploy/supabase_nube.py migrar     # todas las migraciones pendientes, registradas
 python deploy/render_nube.py aplicar      # crea aiscop-api y aiscop-web y fija sus variables
 python deploy/supabase_nube.py auth --sitio https://aiscop-web.onrender.com
 DEMO_CLIENTE_PASSWORD=... DEMO_AGENTE_PASSWORD=... python deploy/supabase_nube.py usuarios
