@@ -8,7 +8,7 @@
 |---|---|---|---|
 | Frontend: React + Vite, sitio estático | Render · Static Site | `aiscop-web` | https://aiscop-web.onrender.com |
 | API FastAPI en Docker, con el componente inteligente | Render · Web Service, plan gratuito, Virginia | `aiscop-api` | https://aiscop-api.onrender.com |
-| Base de datos y autenticación | Supabase, plan gratuito, us-east-1 | `aiscop-demo` | https://ixvmduvpiwsieyrkgxgt.supabase.co |
+| Base de datos y autenticación | Supabase, plan gratuito, us-east-1 | `aiscop-demo` | https://vdiepebgqiaobtvzsbue.supabase.co |
 | Modelo de lenguaje | Groq · `openai/gpt-oss-20b`, temperatura 0 | — | https://api.groq.com/openai/v1 |
 
 La API, la base y el modelo quedan en la costa este de Estados Unidos, para no sumar latencia entre ellos.
