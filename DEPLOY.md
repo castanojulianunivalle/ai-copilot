@@ -8,7 +8,7 @@
 |---|---|---|---|
 | Frontend: React + Vite, sitio estático | Render · Static Site | `aiscop-web` | https://aiscop-web.onrender.com |
 | API FastAPI en Docker, con el componente inteligente | Render · Web Service, plan gratuito, Virginia | `aiscop-api` | https://aiscop-api.onrender.com |
-| Base de datos y autenticación | Supabase, plan gratuito, us-east-1 | `aiscop-demo` | https://ixvmduvpiwsieyrkgxgt.supabase.co |
+| Base de datos y autenticación | Supabase, plan gratuito, us-east-1 | `aiscop-demo` | https://vdiepebgqiaobtvzsbue.supabase.co |
 | Modelo de lenguaje | Groq · `openai/gpt-oss-20b`, temperatura 0 | — | https://api.groq.com/openai/v1 |
 
 La API, la base y el modelo quedan en la costa este de Estados Unidos, para no sumar latencia entre ellos.
@@ -37,7 +37,7 @@ Son públicos por diseño: las URL y la llave anon de Supabase, que viaja en el 
 export SUPABASE_ACCESS_TOKEN=...          # token personal de Supabase
 export RENDER_API_KEY=...                 # llave de la API de Render
 python deploy/supabase_nube.py crear      # proyecto aiscop-demo en us-east-1
-python deploy/supabase_nube.py migrar     # las cuatro migraciones, registradas
+python deploy/supabase_nube.py migrar     # todas las migraciones pendientes, registradas
 python deploy/render_nube.py aplicar      # crea aiscop-api y aiscop-web y fija sus variables
 python deploy/supabase_nube.py auth --sitio https://aiscop-web.onrender.com
 DEMO_CLIENTE_PASSWORD=... DEMO_AGENTE_PASSWORD=... python deploy/supabase_nube.py usuarios

@@ -1,0 +1,87 @@
+{
+  "fecha_utc": "2026-10-25T22:06:12+00:00",
+  "fecha_colombia": "2026-10-25 17:06",
+  "modo": "humo y aceptacion",
+  "web": "https://aiscop-web.onrender.com",
+  "api": "https://aiscop-api.onrender.com",
+  "ref": "v2.1.0",
+  "commit_esperado": "d36f1f526f4420bb505f65f66899527e7d7abd46",
+  "version_api": "2.1.0",
+  "commit_api": "d36f1f5",
+  "aprobados": 9,
+  "total": 9,
+  "casos": [
+    {
+      "id": "TC-H1",
+      "caso": "Acceso a la aplicacion web",
+      "esperado": "200; el bundle apunta a la API de la nube y lleva el commit d36f1f5",
+      "obtenido": "index y bundle /assets/index-CneQIgKh.js; API de la nube en el bundle: True",
+      "estado": "Aprobado",
+      "duracion_ms": 595
+    },
+    {
+      "id": "TC-H2",
+      "caso": "La API responde con la version prevista",
+      "esperado": "200; llm_habilitado true, sin advertencias; commit d36f1f5",
+      "obtenido": "version 2.1.0 · commit d36f1f5 · openai/gpt-oss-20b",
+      "estado": "Aprobado",
+      "duracion_ms": 198
+    },
+    {
+      "id": "TC-H3",
+      "caso": "Autenticacion de cliente y agente",
+      "esperado": "token de Supabase Auth; /me devuelve el rol de cada uno",
+      "obtenido": "/me: {'cliente': 'cliente', 'agente': 'agente'}",
+      "estado": "Aprobado",
+      "duracion_ms": 1417
+    },
+    {
+      "id": "TC-H4",
+      "caso": "Persistencia y servicio inteligente",
+      "esperado": "el ticket se crea clasificado por el LLM; el agente lo lee con categoría, tono, prioridad y confianza, y quedan las dos predicciones en el log",
+      "obtenido": "Facturación · Frustrado · prioridad Alta · confianza 0.95 · estado Abierto · el agente lo ve: True · log ['llm', 'reglas']",
+      "estado": "Aprobado",
+      "duracion_ms": 1429
+    },
+    {
+      "id": "TC-H6",
+      "caso": "El agente cambia el estado; el cliente no puede",
+      "esperado": "PATCH del agente 200 y el cliente ve el ticket Cerrado (RLS: solo los suyos); PATCH del cliente 403",
+      "obtenido": "agente 200 · cliente 403 · el cliente lo ve Cerrado",
+      "estado": "Aprobado",
+      "duracion_ms": 1259
+    },
+    {
+      "id": "TC-H5",
+      "caso": "Manejo de errores y permisos",
+      "esperado": "token invalido 401; agente creando ticket 403; sin sesion no se leen tickets ni la vista del dataset",
+      "obtenido": "token invalido 401 · agente 403 · anon tickets 401 · anon vista 401",
+      "estado": "Aprobado",
+      "duracion_ms": 1179
+    },
+    {
+      "id": "TC-A1",
+      "caso": "HU-06 · clasificacion con el modelo, igual que en local",
+      "esperado": "la nube da la misma categoria que la evaluacion local en 5 tickets de examen",
+      "obtenido": "5 de 5 iguales (ev-015: local Facturación / nube Facturación; ev-043: local Seguridad / nube Seguridad; ev-055: local Móvil / nube Móvil; ev-031: local Rendimiento / nube Rendimiento; ev-049: local Integraciones / nube Integraciones)",
+      "estado": "Aprobado",
+      "duracion_ms": 38836
+    },
+    {
+      "id": "TC-A2",
+      "caso": "HU-06 · revision humana con confianza baja",
+      "esperado": "un ticket sin informacion queda con confianza <= 0.5 y requiere_revision true",
+      "obtenido": "Solicitudes · confianza 0.4 · requiere_revision True",
+      "estado": "Aprobado",
+      "duracion_ms": 10782
+    },
+    {
+      "id": "TC-A4",
+      "caso": "HU-01 · registro de un cliente nuevo en la nube",
+      "esperado": "el registro abre sesion con rol cliente; repetir el correo devuelve un error y no duplica",
+      "obtenido": "rol cliente · correo repetido 422 · usuario de prueba borrado",
+      "estado": "Aprobado",
+      "duracion_ms": 2630
+    }
+  ]
+}

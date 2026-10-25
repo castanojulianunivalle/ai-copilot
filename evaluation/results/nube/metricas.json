@@ -1,32 +1,32 @@
 {
-  "generado_en": "2026-10-18T15:39:57+00:00",
-  "fecha_colombia": "2026-10-18 10:39",
+  "generado_en": "2026-10-25T22:06:20+00:00",
+  "fecha_colombia": "2026-10-25 17:06",
   "api": "https://aiscop-api.onrender.com",
-  "version_api": "2.0.0",
-  "commit_api": "794fdb2",
+  "version_api": "2.1.0",
+  "commit_api": "d36f1f5",
   "modelo": "openai/gpt-oss-20b",
   "sha256_fixture": "c69d84040663ac52a16bbd3729ee4e53a268f927ce58578dfbec78175f0037f8",
   "particion": "examen",
   "n": 44,
   "respuestas_ok": 44,
-  "clasificados_por_llm": 43,
-  "repliegues_a_reglas": 1,
+  "clasificados_por_llm": 44,
+  "repliegues_a_reglas": 0,
   "fallas_http": 0,
   "a_revision": 0,
   "latencia_ms_punta_a_punta": {
-    "mediana": 1242,
-    "p95": 1682,
-    "max": 4764
+    "mediana": 1413,
+    "p95": 11129,
+    "max": 76290
   },
   "nube": {
     "n": 44,
-    "aciertos": 38,
-    "exactitud": 0.8636,
-    "precision_macro": 0.8939,
-    "recall_macro": 0.8636,
-    "f1_macro": 0.8619,
-    "f1_ponderado": 0.8619,
-    "f1_micro": 0.8636,
+    "aciertos": 40,
+    "exactitud": 0.9091,
+    "precision_macro": 0.9333,
+    "recall_macro": 0.9091,
+    "f1_macro": 0.9097,
+    "f1_ponderado": 0.9097,
+    "f1_micro": 0.9091,
     "etiquetas": [
       "Técnico",
       "Facturación",
@@ -98,10 +98,49 @@
         0,
         0,
         0,
+        4,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        4,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        4,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
         3,
-        0,
-        0,
-        0,
         0,
         0,
         1
@@ -112,10 +151,10 @@
         0,
         0,
         0,
+        0,
+        0,
+        0,
         4,
-        0,
-        0,
-        0,
         0,
         0
       ],
@@ -123,17 +162,6 @@
         0,
         0,
         0,
-        0,
-        0,
-        0,
-        4,
-        0,
-        0,
-        0,
-        0
-      ],
-      [
-        1,
         0,
         0,
         0,
@@ -141,34 +169,6 @@
         0,
         0,
         3,
-        0,
-        0,
-        0
-      ],
-      [
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        4,
-        0,
-        0
-      ],
-      [
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0,
-        0,
-        0,
-        2,
         1
       ],
       [
@@ -187,9 +187,9 @@
     ],
     "por_clase": {
       "Técnico": {
-        "precision": 0.6667,
+        "precision": 0.8,
         "recall": 1.0,
-        "f1": 0.8,
+        "f1": 0.8889,
         "soporte": 4
       },
       "Facturación": {
@@ -205,15 +205,15 @@
         "soporte": 4
       },
       "Acceso": {
-        "precision": 0.75,
+        "precision": 1.0,
         "recall": 0.75,
-        "f1": 0.75,
+        "f1": 0.8571,
         "soporte": 4
       },
       "Cuenta": {
-        "precision": 0.75,
-        "recall": 0.75,
-        "f1": 0.75,
+        "precision": 0.8,
+        "recall": 1.0,
+        "f1": 0.8889,
         "soporte": 4
       },
       "Rendimiento": {
@@ -242,8 +242,8 @@
       },
       "Móvil": {
         "precision": 1.0,
-        "recall": 0.5,
-        "f1": 0.6667,
+        "recall": 0.75,
+        "f1": 0.8571,
         "soporte": 4
       },
       "Solicitudes": {
@@ -492,23 +492,30 @@
     }
   },
   "coincidencia_con_local": {
-    "iguales": 43,
+    "iguales": 42,
     "de": 44,
     "distintas": [
       {
-        "id": "ev-047",
-        "real": "Seguridad",
+        "id": "ev-011",
+        "real": "Cuenta",
         "local": "Solicitudes",
-        "nube": "Técnico",
-        "clasificado_por": "reglas"
+        "nube": "Cuenta",
+        "clasificado_por": "llm"
+      },
+      {
+        "id": "ev-060",
+        "real": "Móvil",
+        "local": "Acceso",
+        "nube": "Móvil",
+        "clasificado_por": "llm"
       }
     ]
   },
   "mcnemar_local_vs_nube": {
     "b": 0,
-    "c": 0,
-    "n_desacuerdos": 0,
-    "p_valor": 1.0,
+    "c": 2,
+    "n_desacuerdos": 2,
+    "p_valor": 0.5,
     "significativo": false
   }
 }

@@ -35,6 +35,7 @@ from particion import cargar, filtrar  # noqa: E402
 
 UMBRAL_REVISION = 0.5          # CONFIANZA_REVISION_HUMANA en python-api/ai/parser.py
 CLIENTE, AGENTE = "cliente.demo@aiscop.local", "agente.demo@aiscop.local"
+AGENTE_2 = "agente2.demo@aiscop.local"  # HU-13: segundo agente para la toma sin choques
 CATEGORIAS_PARIDAD = ("Facturación", "Seguridad", "Móvil", "Rendimiento", "Integraciones")
 COLOMBIA = timezone(timedelta(hours=-5))
 
@@ -52,6 +53,7 @@ class Contexto:
         self.casos: list[dict] = []
         self.salud: dict = {}
         self.ticket_humo: str | None = None
+        self.ticket_atencion: str | None = None
 
 
 def commit_de(ref: str) -> str:
@@ -246,6 +248,47 @@ def aceptacion(ctx: Contexto) -> None:
         return f"rol {rol} · correo repetido {repetido} · usuario de prueba {'borrado' if borrado else 'conservado'}", ok
 
 
+# ---------------------------------------------------------------------------
+# Atencion por agentes (HU-13)
+# ---------------------------------------------------------------------------
+def atencion(ctx: Contexto) -> None:
+    @caso(ctx, "TC-A5", "HU-13 · un ticket solo lo toma un agente",
+          "el primer agente lo toma (200); el segundo recibe 409 y no puede liberarlo (403); queda asignado al primero")
+    def _():
+        ctx.tokens["agente2"] = iniciar_sesion(ctx, AGENTE_2, variable("DEMO_AGENTE_PASSWORD"))
+        t = crear_ticket(ctx, "Prueba de asignacion", "No puedo descargar la factura de este mes desde el portal.")
+        ctx.ticket_atencion = t["ticket_id"]
+        primero = estado_http(lambda: api(ctx, "POST", f"/tickets/{t['ticket_id']}/tomar", "agente"))
+        segundo = estado_http(lambda: api(ctx, "POST", f"/tickets/{t['ticket_id']}/tomar", "agente2"))
+        liberar = estado_http(lambda: api(ctx, "POST", f"/tickets/{t['ticket_id']}/liberar", "agente2"))
+        id_agente = api(ctx, "GET", "/me", "agente")[1]["id"]
+        guardado = rest(ctx, f"tickets?id=eq.{t['ticket_id']}&select=asignado_a", "agente")[1]
+        del_primero = guardado == [{"asignado_a": id_agente}]
+        ok = primero == 200 and segundo == 409 and liberar == 403 and del_primero
+        return (f"primer agente {primero} · segundo agente {segundo} · liberar ajeno {liberar} · "
+                f"asignado al primero {del_primero}"), ok
+
+    @caso(ctx, "TC-A6", "HU-13 · comentarios, notas internas y estado con mensaje",
+          "el cliente ve la respuesta y el mensaje del cambio de estado, nunca la nota interna, y no puede escribir notas")
+    def _():
+        ticket = ctx.ticket_atencion
+        api(ctx, "POST", f"/tickets/{ticket}/comentarios", "agente", {"texto": "Nota interna de prueba", "interno": True})
+        api(ctx, "POST", f"/tickets/{ticket}/comentarios", "agente", {"texto": "Respuesta de prueba"})
+        api(ctx, "PATCH", f"/tickets/{ticket}/estado?estado=En%20proceso", "agente", {"comentario": "Mensaje de prueba"})
+        nota_cliente = estado_http(lambda: api(ctx, "POST", f"/tickets/{ticket}/comentarios", "cliente",
+                                               {"texto": "x", "interno": True}))
+        del_cliente = api(ctx, "GET", f"/tickets/{ticket}/eventos", "cliente")[1]
+        del_agente = api(ctx, "GET", f"/tickets/{ticket}/eventos", "agente")[1]
+        textos = [e.get("texto") for e in del_cliente]
+        estado = rest(ctx, f"tickets?id=eq.{ticket}&select=estado", "cliente")[1]
+        ve_nota = "Nota interna de prueba" in textos
+        ok = ("Respuesta de prueba" in textos and "Mensaje de prueba" in textos and not ve_nota
+              and any(e.get("interno") for e in del_agente) and nota_cliente == 403
+              and estado == [{"estado": "En proceso"}])
+        return (f"eventos: cliente {len(del_cliente)} / agente {len(del_agente)} · el cliente ve la nota interna "
+                f"{ve_nota} · nota escrita por el cliente {nota_cliente} · estado {estado[0]['estado'] if estado else '?'}"), ok
+
+
 def borrar_usuario(uid: str) -> bool:
     """Borra el usuario de prueba con la llave de servicio, solo si hay token de la Management API (corrida local)."""
     if not os.getenv("SUPABASE_ACCESS_TOKEN"):
@@ -337,6 +380,7 @@ def main(argv=None) -> int:
         humo(ctx)
         if not args.solo_humo and "cliente" in ctx.tokens:
             aceptacion(ctx)
+            atencion(ctx)
             if args.repliegue:
                 modo += " con repliegue"
                 repliegue(ctx)

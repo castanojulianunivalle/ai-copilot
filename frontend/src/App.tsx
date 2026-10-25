@@ -1,87 +1,18 @@
 import { useEffect, useRef, useState, Fragment } from 'react';
 import { supabase } from './lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Eye, CheckCircle, XCircle, AlertCircle, Loader2, Search, Edit, Trash2, X, LogOut, Users } from 'lucide-react';
+import { Loader2, Trash2, X, LogOut, Users, Headphones, UserRound, RefreshCw } from 'lucide-react';
 import ThemeToggle from './components/ThemeToggle';
 import { useAuth } from './contexts/AuthContext';
 import LoginRegister from './components/LoginRegister';
 import AdminUsers from './components/AdminUsers';
 import ResetPassword from './components/ResetPassword';
 import VersionInfo from './components/VersionInfo';
+import BandejaAgente from './components/BandejaAgente';
+import MisSolicitudes from './components/MisSolicitudes';
+import PanelTicket from './components/PanelTicket';
 import { API_URL } from './lib/api';
-
-type Ticket = {
-  id: string;
-  created_at: string;
-  titulo: string;
-  description: string;
-  category: string | null;
-  estado: string;
-  // HU-06: salidas del componente inteligente, guardadas con el ticket.
-  sentimiento?: string | null;
-  prioridad?: string | null;
-  confianza_ia?: number | null;
-  clasificado_por?: string | null;
-  // HU-11 y HU-12: por qué va a revisión y si espera reclasificarse con el modelo.
-  motivo_revision?: string | null;
-  reclasificar?: boolean | null;
-};
-
-const estadoColor = (estado: string) => {
-  return estado === 'Cerrado'
-    ? 'bg-green-500/10 text-green-700 dark:text-green-300 border-green-500/40'
-    : 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/40';
-};
-
-const sentimientoColor = (sentimiento: string) => {
-  switch (sentimiento) {
-    case 'Frustrado':
-      return 'bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/40';
-    case 'Urgente':
-      return 'bg-orange-500/10 text-orange-700 dark:text-orange-300 border-orange-500/40';
-    case 'Satisfecho':
-      return 'bg-green-500/10 text-green-700 dark:text-green-300 border-green-500/40';
-    default:
-      return 'bg-slate-500/10 text-slate-600 dark:text-slate-300 border-slate-500/40';
-  }
-};
-
-const prioridadColor = (prioridad: string) => {
-  switch (prioridad) {
-    case 'Alta':
-      return 'bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/40';
-    case 'Media':
-      return 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/40';
-    default:
-      return 'bg-slate-500/10 text-slate-600 dark:text-slate-300 border-slate-500/40';
-  }
-};
-
-// Mismo umbral que la API (CONFIANZA_REVISION_HUMANA en python-api/ai/parser.py),
-// inclusivo: un 0,5 lo revisa una persona.
-const UMBRAL_REVISION = 0.5;
-
-// HU-11: la API guarda el motivo; los tickets anteriores al Sprint 7 no lo tienen y se deduce de la confianza.
-const motivoRevision = (ticket: Ticket): string | null =>
-  ticket.motivo_revision ??
-  (ticket.clasificado_por === 'llm' && ticket.confianza_ia != null && Number(ticket.confianza_ia) <= UMBRAL_REVISION
-    ? 'confianza_baja'
-    : null);
-
-const requiereRevision = (ticket: Ticket) => motivoRevision(ticket) !== null;
-
-const textoMotivo = (ticket: Ticket) =>
-  motivoRevision(ticket) === 'urgente_sin_detalle'
-    ? 'Requiere revisión humana: es urgente pero no describe el problema.'
-    : `Requiere revisión humana: la confianza del modelo está en el umbral (${formatoConfianza(UMBRAL_REVISION)}) o por debajo.`;
-
-const formatoConfianza = (confianza: number | null | undefined) =>
-  confianza == null ? '' : Number(confianza).toLocaleString('es-CO', { maximumFractionDigits: 2 });
-
-const origenClasificacion = (ticket: Ticket) =>
-  ticket.clasificado_por === 'llm'
-    ? `IA · confianza ${formatoConfianza(ticket.confianza_ia)}`
-    : 'Motor de reglas';
+import { Persona, Ticket, llamarApi } from './lib/tickets';
 
 type Notification = {
   id: string;
@@ -107,100 +38,76 @@ export default function App() {
   }, []);
 
   const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [agentes, setAgentes] = useState<Persona[]>([]);
   const [loading, setLoading] = useState(true);
-  const [newTitulo, setNewTitulo] = useState('');
-  const [newDescription, setNewDescription] = useState('');
-  const [submitting, setSubmitting] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+  // Se guarda el id y no el ticket: así el panel muestra siempre la versión recién cargada.
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [tomando, setTomando] = useState<string | null>(null);
   const [editingTicket, setEditingTicket] = useState<Ticket | null>(null);
   const [editDescription, setEditDescription] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<{ ticketId: string; description: string } | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
   const [showTour, setShowTour] = useState(false);
   const [tourStepIndex, setTourStepIndex] = useState(0);
   const [highlightedElement, setHighlightedElement] = useState<HTMLElement | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [adminView, setAdminView] = useState(false);
-  const itemsPerPage = 9; // 3x3 grid
-  const currentPageRef = useRef(currentPage);
   const headerRef = useRef<HTMLElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
-  const tourSteps: TourStep[] = [
-    {
-      title: 'Bienvenido',
-      description: 'Este dashboard gestiona los tickets de soporte.',
-      targetKey: 'header',
-    },
-    {
-      title: 'Crear tickets',
-      description: 'Usa el formulario para crear un nuevo ticket de soporte.',
-      targetKey: 'form',
-    },
-    {
-      title: 'Buscar y navegar',
-      description: 'Filtra por descripción o categoría y usa la paginación.',
-      targetKey: 'search',
-    },
-  ];
+  const isCliente = profile?.role === 'cliente';
+  const isAgente = profile?.role === 'agente' || profile?.role === 'administrador';
+  const isAdministrador = profile?.role === 'administrador';
+  const token = session?.access_token;
+
+  const tourSteps: TourStep[] = isAgente
+    ? [
+        { title: 'Bandeja de atención', description: 'Aquí llegan las solicitudes de los clientes, ya clasificadas por la IA y ordenadas por prioridad.', targetKey: 'header' },
+        { title: 'Toma y atiende', description: 'Toma un ticket de «Sin asignar», respóndele al cliente o deja notas internas, y ciérralo al resolverlo. Usa las pestañas y el buscador para filtrar.', targetKey: 'search' },
+      ]
+    : [
+        { title: 'Bienvenido', description: 'Desde aquí pides ayuda al equipo de soporte y sigues tus casos.', targetKey: 'header' },
+        { title: 'Crea una solicitud', description: 'Cuéntanos el problema. Verás cuándo un agente la toma y podrás conversar con él.', targetKey: 'form' },
+      ];
 
   const addNotification = (type: Notification['type'], message: string) => {
-    const id = Date.now().toString();
+    const id = `${Date.now()}-${Math.random()}`;
     setNotifications(prev => [...prev, { id, type, message }]);
     setTimeout(() => {
       setNotifications(prev => prev.filter(n => n.id !== id));
     }, 5000);
   };
 
-  const jumpToFirstPage = () => {
-    if (currentPageRef.current > 1) {
-      setCurrentPage(1);
-    }
-    if (typeof window !== 'undefined' && window.scrollY > 0) {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  };
-
   const finishTour = () => {
     setShowTour(false);
     setTourStepIndex(0);
     if (typeof window !== 'undefined') {
-      window.localStorage.setItem('supportCopilotTourSeen', 'true');
+      window.localStorage.setItem('supportCopilotTourSeen-v2', 'true');
     }
   };
 
   useEffect(() => {
-    currentPageRef.current = currentPage;
-  }, [currentPage]);
-
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth <= 768);
-    };
+    const checkMobile = () => setIsMobile(window.innerWidth <= 768);
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const seen = window.localStorage.getItem('supportCopilotTourSeen');
-    if (!seen) {
-      setTimeout(() => setShowTour(true), 400);
+    if (typeof window === 'undefined' || !profile) return;
+    if (!window.localStorage.getItem('supportCopilotTourSeen-v2')) {
+      setTimeout(() => setShowTour(true), 600);
     }
-  }, []);
+  }, [profile]);
 
   useEffect(() => {
     if (!showTour) {
       setHighlightedElement(null);
       return;
     }
-
     const step = tourSteps[tourStepIndex];
     const targetMap: Record<TourStep['targetKey'], HTMLElement | null> = {
       header: headerRef.current,
@@ -209,10 +116,8 @@ export default function App() {
     };
     const element = targetMap[step?.targetKey] || null;
     setHighlightedElement(element);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-  }, [showTour, tourStepIndex, tourSteps]);
+    if (element) element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [showTour, tourStepIndex]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchTickets = async () => {
     setLoading(true);
@@ -227,34 +132,59 @@ export default function App() {
   useEffect(() => {
     if (session) fetchTickets();
     else setTickets([]);
-  }, [session]);
+  }, [session]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newTitulo.trim() || !newDescription.trim()) return;
+  // El equipo necesita los correos de los agentes para saber quién tiene cada ticket.
+  useEffect(() => {
+    if (!session || !isAgente) return;
+    llamarApi<Persona[]>(token, '/agentes').then(setAgentes).catch(() => setAgentes([]));
+  }, [session, isAgente]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    setSubmitting(true);
+  // La bandeja se actualiza sola: otro agente puede tomar o cerrar tickets en cualquier momento.
+  useEffect(() => {
+    if (!session) return;
+    const intervalo = setInterval(fetchTickets, 30000);
+    return () => clearInterval(intervalo);
+  }, [session]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const authHeaders = (): HeadersInit => ({
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  });
+
+  const handleCrear = async (titulo: string, description: string): Promise<boolean> => {
     try {
       const response = await fetch(`${API_URL}/create-ticket`, {
         method: 'POST',
         headers: authHeaders(),
-        body: JSON.stringify({ titulo: newTitulo, description: newDescription }),
+        body: JSON.stringify({ titulo, description }),
       });
-      if (response.ok) {
-        setNewTitulo('');
-        setNewDescription('');
-        addNotification('success', 'Ticket creado exitosamente');
-        const { data } = await supabase.from('tickets').select('*').order('created_at', { ascending: false });
-        if (data) setTickets(data as Ticket[]);
-        jumpToFirstPage();
-      } else {
-        addNotification('error', 'Error al crear el ticket');
+      if (!response.ok) {
+        addNotification('error', 'No se pudo enviar la solicitud');
+        return false;
       }
+      addNotification('success', 'Solicitud enviada. Te avisaremos aquí cuando un agente la tome.');
+      await fetchTickets();
+      return true;
     } catch (error) {
       console.error('Error creating ticket:', error);
-      addNotification('error', 'Error de conexión al crear ticket');
+      addNotification('error', 'Error de conexión al enviar la solicitud');
+      return false;
+    }
+  };
+
+  const tomarRapido = async (ticket: Ticket) => {
+    setTomando(ticket.id);
+    try {
+      await llamarApi(token, `/tickets/${ticket.id}/tomar`, { method: 'POST' });
+      addNotification('success', `Tomaste «${ticket.titulo}»`);
+      await fetchTickets();
+      setSelectedId(ticket.id);
+    } catch (e) {
+      addNotification('error', (e as Error).message);
+      await fetchTickets();
     } finally {
-      setSubmitting(false);
+      setTomando(null);
     }
   };
 
@@ -265,7 +195,6 @@ export default function App() {
 
   const handleUpdate = async () => {
     if (!editingTicket || !editDescription.trim()) return;
-
     setIsUpdating(true);
     try {
       const response = await fetch(`${API_URL}/tickets/${editingTicket.id}`, {
@@ -276,46 +205,22 @@ export default function App() {
       if (response.ok) {
         setEditingTicket(null);
         setEditDescription('');
-        addNotification('success', 'Ticket actualizado');
-        setSelectedTicket(null);
-        const { data } = await supabase.from('tickets').select('*').order('created_at', { ascending: false });
-        if (data) setTickets(data as Ticket[]);
+        addNotification('success', 'Solicitud actualizada');
+        await fetchTickets();
       } else {
         const error = await response.json();
-        addNotification('error', error.detail || 'Error al actualizar el ticket');
+        addNotification('error', error.detail || 'Error al actualizar la solicitud');
       }
     } catch (error) {
       console.error('Error updating ticket:', error);
-      addNotification('error', 'Error de conexión al actualizar ticket');
+      addNotification('error', 'Error de conexión al actualizar');
     } finally {
       setIsUpdating(false);
     }
   };
 
-  const handleToggleEstado = async (ticketId: string, currentEstado: string) => {
-    const nuevoEstado = currentEstado === 'Abierto' ? 'Cerrado' : 'Abierto';
-    try {
-      const response = await fetch(`${API_URL}/tickets/${ticketId}/estado?estado=${nuevoEstado}`, {
-        method: 'PATCH',
-        headers: authHeaders(),
-      });
-      if (response.ok) {
-        addNotification('success', `Estado: ${nuevoEstado}`);
-        setTickets(prev => prev.map(t => t.id === ticketId ? { ...t, estado: nuevoEstado } : t));
-        if (selectedTicket?.id === ticketId) setSelectedTicket({ ...selectedTicket, estado: nuevoEstado });
-      }
-    } catch (error) {
-      addNotification('error', 'Error al actualizar estado');
-    }
-  };
-
-  const handleDeleteClick = (ticketId: string, description: string) => {
-    setConfirmDelete({ ticketId, description });
-  };
-
   const handleDeleteConfirm = async () => {
     if (!confirmDelete) return;
-
     setIsDeleting(confirmDelete.ticketId);
     try {
       const response = await fetch(`${API_URL}/tickets/${confirmDelete.ticketId}`, {
@@ -323,40 +228,29 @@ export default function App() {
         headers: authHeaders(),
       });
       if (response.ok) {
-        addNotification('success', 'Ticket eliminado exitosamente');
-        setSelectedTicket(null);
+        addNotification('success', 'Solicitud eliminada');
+        setSelectedId(null);
         setConfirmDelete(null);
-        const { data } = await supabase.from('tickets').select('*').order('created_at', { ascending: false });
-        if (data) setTickets(data as Ticket[]);
+        await fetchTickets();
       } else {
-        addNotification('error', 'Error al eliminar el ticket');
+        addNotification('error', 'Error al eliminar la solicitud');
       }
     } catch (error) {
       console.error('Error deleting ticket:', error);
-      addNotification('error', 'Error de conexión al eliminar ticket');
+      addNotification('error', 'Error de conexión al eliminar');
     } finally {
       setIsDeleting(null);
     }
   };
 
-  // Manejar parámetro de URL para abrir ticket directamente
+  // Abrir un ticket directamente con ?ticket=<id>
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const ticketId = params.get('ticket');
-    if (ticketId && tickets.length > 0) {
-      const ticket = tickets.find(t => t.id === ticketId);
-      if (ticket) {
-        setSelectedTicket(ticket);
-        // Limpiar el parámetro de la URL
-        window.history.replaceState({}, '', window.location.pathname);
-      }
+    const ticketId = new URLSearchParams(window.location.search).get('ticket');
+    if (ticketId && tickets.some(t => t.id === ticketId)) {
+      setSelectedId(ticketId);
+      window.history.replaceState({}, '', window.location.pathname);
     }
   }, [tickets]);
-
-  const authHeaders = (): HeadersInit => ({
-    'Content-Type': 'application/json',
-    ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
-  });
 
   if (authLoading) {
     return (
@@ -397,39 +291,30 @@ export default function App() {
     );
   }
 
-  const isCliente = profile?.role === 'cliente';
-  const isAgente = profile?.role === 'agente' || profile?.role === 'administrador';
-  const isAdministrador = profile?.role === 'administrador';
-
-  const filteredTickets = tickets.filter(ticket =>
-    ticket.titulo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    ticket.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    ticket.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    ticket.sentimiento?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    ticket.prioridad?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const totalPages = Math.ceil(filteredTickets.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedTickets = filteredTickets.slice(startIndex, startIndex + itemsPerPage);
+  const selectedTicket = tickets.find(t => t.id === selectedId) ?? null;
+  const nombreRol = isAdministrador ? 'Administrador' : isAgente ? 'Agente de soporte' : 'Cliente';
 
   return (
-    <div className="min-h-screen p-6 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors">
-      <main className="container mx-auto max-w-4xl">
+    <div className="min-h-screen p-4 sm:p-6 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors">
+      <main className={`container mx-auto ${isAgente ? 'max-w-5xl' : 'max-w-6xl'}`}>
         <motion.header
           ref={headerRef}
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className={`mb-6 flex items-center justify-between p-6 bg-gradient-to-r from-primary-500 to-primary-600 dark:from-primary-600 dark:to-primary-700 rounded-xl shadow-lg ${
-            highlightedElement === headerRef.current ? 'ring-4 ring-yellow-400 ring-offset-4 ring-offset-slate-900 relative z-50' : ''
-          }`}
+          className={`mb-6 flex flex-wrap items-center justify-between gap-4 p-5 rounded-xl shadow-lg ${
+            isAgente
+              ? 'bg-gradient-to-r from-slate-800 to-slate-900 dark:from-slate-800 dark:to-slate-950'
+              : 'bg-gradient-to-r from-primary-500 to-primary-600 dark:from-primary-600 dark:to-primary-700'
+          } ${highlightedElement === headerRef.current ? 'ring-4 ring-yellow-400 ring-offset-4 ring-offset-slate-900 relative z-50' : ''}`}
         >
           <div className="flex items-center gap-3">
-            <img src="/logo.svg" alt="AI Support Co-Pilot Logo" className="h-12 w-12" />
+            <img src="/logo.svg" alt="AI Support Co-Pilot Logo" className="h-11 w-11" />
             <div>
-              <h1 className="text-2xl font-bold text-white">AI Support Co-Pilot</h1>
-              <p className="text-primary-100 dark:text-primary-200">
-                Mesa de Ayuda - Gestión de tickets con clasificación por IA.
+              <h1 className="text-xl sm:text-2xl font-bold text-white">
+                {isAgente ? 'Mesa de atención' : 'Centro de ayuda'}
+              </h1>
+              <p className="text-sm text-white/75">
+                {isAgente ? 'Atiende las solicitudes de los clientes, clasificadas por IA.' : 'Pide ayuda y sigue el avance de tus casos.'}
               </p>
             </div>
           </div>
@@ -437,21 +322,31 @@ export default function App() {
             {isAdministrador && (
               <button
                 onClick={() => setAdminView(!adminView)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                  adminView ? 'bg-white/30 text-white' : 'bg-white/10 hover:bg-white/20 text-primary-100'
-                }`}
-                title={adminView ? 'Ver tickets' : 'Gestión de usuarios'}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors text-white ${adminView ? 'bg-white/30' : 'bg-white/10 hover:bg-white/20'}`}
+                title={adminView ? 'Ver la bandeja' : 'Gestión de usuarios'}
               >
                 <Users className="w-4 h-4 inline mr-1.5 -mt-0.5" />
-                {adminView ? 'Tickets' : 'Usuarios'}
+                {adminView ? 'Bandeja' : 'Usuarios'}
               </button>
             )}
-            <span className="text-sm text-primary-100">
-              {profile?.role === 'administrador' ? 'Administrador' : profile?.role === 'agente' ? 'Agente' : 'Cliente'}
-            </span>
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/10 text-white" title={session.user.email ?? ''}>
+              {isAgente ? <Headphones className="w-4 h-4" /> : <UserRound className="w-4 h-4" />}
+              <div className="leading-tight">
+                <p className="text-sm font-semibold">{nombreRol}</p>
+                <p className="text-xs text-white/70 max-w-[160px] truncate">{session.user.email}</p>
+              </div>
+            </div>
+            <button
+              onClick={fetchTickets}
+              className="p-2 rounded-lg hover:bg-white/20 transition-colors text-white"
+              title="Actualizar"
+              aria-label="Actualizar"
+            >
+              <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+            </button>
             <button
               onClick={() => signOut()}
-              className="p-2 rounded-lg hover:bg-white/20 transition-colors"
+              className="p-2 rounded-lg hover:bg-white/20 transition-colors text-white"
               title="Cerrar sesión"
               aria-label="Cerrar sesión"
             >
@@ -464,278 +359,58 @@ export default function App() {
         {adminView && isAdministrador ? (
           <AdminUsers />
         ) : (
-        <Fragment>
-        {isCliente && (
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="mb-6 card"
-        >
-          <h2 className="mb-3 font-semibold">Crear ticket</h2>
-          <form
-            ref={formRef}
-            onSubmit={handleSubmit}
-            className={`flex flex-col gap-2 ${
-              highlightedElement === formRef.current ? 'ring-4 ring-yellow-400 ring-offset-4 ring-offset-slate-900 relative z-50' : ''
-            }`}
-            aria-label="Crear ticket"
-          >
-            <input
-              type="text"
-              aria-label="Título del ticket"
-              value={newTitulo}
-              onChange={(e) => setNewTitulo(e.target.value)}
-              placeholder="Título del ticket..."
-              className="rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-2 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus-visible:ring-2 focus-visible:ring-primary-400"
-              disabled={submitting}
-            />
-            <input
-              type="text"
-              aria-label="Descripción del ticket"
-              value={newDescription}
-              onChange={(e) => setNewDescription(e.target.value)}
-              placeholder="Describe el problema o consulta..."
-              className="flex-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-2 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus-visible:ring-2 focus-visible:ring-primary-400"
-              disabled={submitting}
-            />
-            <button
-              type="submit"
-              disabled={submitting || !newTitulo.trim() || !newDescription.trim()}
-              className="btn-primary disabled:opacity-50 flex items-center gap-2"
-              aria-disabled={submitting || !newTitulo.trim() || !newDescription.trim()}
-            >
-              {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-              {submitting ? 'Creando...' : 'Crear'}
-            </button>
-          </form>
-        </motion.section>
+          <Fragment>
+            {isAgente && profile && (
+              <BandejaAgente
+                tickets={tickets}
+                usuarioId={profile.id}
+                agentes={agentes}
+                cargando={loading}
+                tomando={tomando}
+                onAbrir={(t) => setSelectedId(t.id)}
+                onTomar={tomarRapido}
+                buscadorRef={searchRef}
+              />
+            )}
+            {isCliente && (
+              <MisSolicitudes
+                tickets={tickets}
+                cargando={loading}
+                onAbrir={(t) => setSelectedId(t.id)}
+                onCrear={handleCrear}
+                formRef={formRef}
+              />
+            )}
+          </Fragment>
         )}
 
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="card"
-        >
-          <div className="flex items-center justify-between px-1 py-3 border-b border-slate-800">
-            <h2 className="font-semibold">Tickets ({filteredTickets.length})</h2>
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-500" />
-                <input
-                  ref={searchRef}
-                  type="text"
-                  placeholder="Buscar tickets..."
-                  value={searchTerm}
-                  onChange={(e) => {
-                    setSearchTerm(e.target.value);
-                    setCurrentPage(1); // Reset to first page on search
-                  }}
-                  className={`pl-10 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-1 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus-visible:ring-2 focus-visible:ring-primary-400 ${
-                    highlightedElement === searchRef.current ? 'ring-4 ring-yellow-400 ring-offset-4 ring-offset-slate-900 relative z-50' : ''
-                  }`}
-                />
-              </div>
-              {loading && <Loader2 className="w-4 h-4 animate-spin text-slate-400" />}
-            </div>
-          </div>
-          <div className="p-4">
-            {paginatedTickets.length === 0 && !loading && (
-              <div className="text-slate-400 text-center py-8">No hay tickets aún.</div>
-            )}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <AnimatePresence>
-                {paginatedTickets.map((ticket) => (
-                  <motion.div
-                    key={ticket.id}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.9 }}
-                    className="card p-4 cursor-pointer hover:bg-slate-800/50 transition-colors relative group"
-                    onClick={() => setSelectedTicket(ticket)}
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="text-sm text-gray-500 dark:text-gray-400 font-mono">#{ticket.id.slice(-8)}</div>
-                    </div>
-                    <h3 className="font-medium text-gray-900 dark:text-gray-100 mb-2 line-clamp-2">{ticket.titulo}</h3>
-                    <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-                      <span className={`px-2 py-0.5 rounded border ${estadoColor(ticket.estado)}`}>{ticket.estado}</span>
-                      <span>{ticket.category || 'Sin categoría'}</span>
-                      <span>{new Date(ticket.created_at).toLocaleDateString()}</span>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-1.5 mt-2 text-xs">
-                      {ticket.sentimiento && (
-                        <span className={`px-2 py-0.5 rounded border ${sentimientoColor(ticket.sentimiento)}`} title="Sentimiento detectado">
-                          {ticket.sentimiento}
-                        </span>
-                      )}
-                      {ticket.prioridad && (
-                        <span className={`px-2 py-0.5 rounded border ${prioridadColor(ticket.prioridad)}`} title="Prioridad">
-                          Prioridad {ticket.prioridad}
-                        </span>
-                      )}
-                      <span className="px-2 py-0.5 rounded border bg-primary-500/10 text-primary-700 dark:text-primary-300 border-primary-500/40" title="Quién clasificó el ticket">
-                        {origenClasificacion(ticket)}
-                      </span>
-                      {requiereRevision(ticket) && (
-                        <span className="px-2 py-0.5 rounded border bg-yellow-400/20 text-yellow-800 dark:text-yellow-300 border-yellow-500/50 font-medium" title="Confianza en el umbral o por debajo: lo revisa una persona">
-                          Requiere revisión
-                        </span>
-                      )}
-                    </div>
-                    <div 
-                      className="absolute top-2 right-2 flex gap-1.5 z-10"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <button
-                        onClick={() => handleEdit(ticket)}
-                        className="p-2 rounded-md bg-blue-500/30 hover:bg-blue-500/50 text-blue-400 hover:text-blue-200 transition-all shadow-md hover:shadow-lg border border-blue-500/30 hover:border-blue-500/50"
-                        title="Editar ticket"
-                        aria-label="Editar ticket"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteClick(ticket.id, ticket.description)}
-                        disabled={isDeleting === ticket.id}
-                        className="p-2 rounded-md bg-red-500/30 hover:bg-red-500/50 text-red-400 hover:text-red-200 transition-all shadow-md hover:shadow-lg border border-red-500/30 hover:border-red-500/50 disabled:opacity-50 disabled:cursor-not-allowed"
-                        title="Eliminar ticket"
-                        aria-label="Eliminar ticket"
-                      >
-                        {isDeleting === ticket.id ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Trash2 className="w-4 h-4" />
-                        )}
-                      </button>
-                    </div>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-            </div>
-            {totalPages > 1 && (
-              <div className="flex items-center justify-center gap-2 mt-6">
-                <button
-                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                  disabled={currentPage === 1}
-                  className="btn-primary disabled:opacity-50 px-3 py-1 text-sm"
-                >
-                  Anterior
-                </button>
-                <span className="text-gray-600 dark:text-gray-400 text-sm">
-                  Página {currentPage} de {totalPages}
-                </span>
-                <button
-                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                  disabled={currentPage === totalPages}
-                  className="btn-primary disabled:opacity-50 px-3 py-1 text-sm"
-                >
-                  Siguiente
-                </button>
-              </div>
-            )}
-          </div>
-        </motion.section>
-        </Fragment>
-        )}
-
-        {/* Modal para detalles de ticket */}
+        {/* Panel del ticket: atención para el agente, seguimiento para el cliente */}
         <AnimatePresence>
-          {selectedTicket && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
-              onClick={() => setSelectedTicket(null)}
-            >
-              <motion.div
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.9, opacity: 0 }}
-                className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold">Detalles del Ticket</h3>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleEdit(selectedTicket)}
-                      className="p-2 rounded-md bg-blue-500/30 hover:bg-blue-500/50 text-blue-400 hover:text-blue-200 transition-all shadow-md hover:shadow-lg border border-blue-500/30 hover:border-blue-500/50"
-                      title="Editar ticket"
-                      aria-label="Editar ticket"
-                    >
-                      <Edit className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDeleteClick(selectedTicket.id, selectedTicket.description)}
-                      disabled={isDeleting === selectedTicket.id}
-                      className="p-2 rounded-md bg-red-500/30 hover:bg-red-500/50 text-red-400 hover:text-red-200 transition-all shadow-md hover:shadow-lg border border-red-500/30 hover:border-red-500/50 disabled:opacity-50 disabled:cursor-not-allowed"
-                      title="Eliminar ticket"
-                      aria-label="Eliminar ticket"
-                    >
-                      {isDeleting === selectedTicket.id ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Trash2 className="w-4 h-4" />
-                      )}
-                    </button>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <p><strong>ID:</strong> <span className="font-mono text-sm">{selectedTicket.id}</span></p>
-                  <p><strong>Título:</strong> {selectedTicket.titulo}</p>
-                  <p><strong>Descripción:</strong> {selectedTicket.description}</p>
-                  <p><strong>Categoría:</strong> {selectedTicket.category || 'Sin categoría'}</p>
-                  <p><strong>Sentimiento:</strong>{' '}
-                    {selectedTicket.sentimiento
-                      ? <span className={`px-2 py-0.5 rounded text-xs border ${sentimientoColor(selectedTicket.sentimiento)}`}>{selectedTicket.sentimiento}</span>
-                      : 'No detectado (clasificó el motor de reglas)'}
-                  </p>
-                  <p><strong>Prioridad:</strong>{' '}
-                    {selectedTicket.prioridad
-                      ? <span className={`px-2 py-0.5 rounded text-xs border ${prioridadColor(selectedTicket.prioridad)}`}>{selectedTicket.prioridad}</span>
-                      : 'Sin prioridad'}
-                  </p>
-                  <p><strong>Clasificado por:</strong> {origenClasificacion(selectedTicket)}</p>
-                  {requiereRevision(selectedTicket) && (
-                    <p className="text-sm px-3 py-2 rounded border bg-yellow-400/20 text-yellow-800 dark:text-yellow-300 border-yellow-500/50">
-                      {textoMotivo(selectedTicket)}
-                    </p>
-                  )}
-                  <p><strong>Estado:</strong> <span className={`px-2 py-0.5 rounded text-xs border ${estadoColor(selectedTicket.estado)}`}>{selectedTicket.estado}</span></p>
-                  {isAgente && (
-                  <div className="flex gap-2 pt-2">
-                    <button
-                      onClick={() => handleToggleEstado(selectedTicket.id, selectedTicket.estado)}
-                      className="text-sm px-3 py-1 rounded border border-primary-500/50 hover:bg-primary-500/20"
-                    >
-                      Cambiar a {selectedTicket.estado === 'Abierto' ? 'Cerrado' : 'Abierto'}
-                    </button>
-                  </div>
-                  )}
-                  <p><strong>Creado:</strong> {new Date(selectedTicket.created_at).toLocaleString()}</p>
-                </div>
-                <button
-                  onClick={() => setSelectedTicket(null)}
-                  className="btn-primary mt-4 w-full"
-                >
-                  Cerrar
-                </button>
-              </motion.div>
-            </motion.div>
+          {selectedTicket && profile && (
+            <PanelTicket
+              key={selectedTicket.id}
+              ticket={selectedTicket}
+              rol={profile.role}
+              usuarioId={profile.id}
+              token={token}
+              agentes={agentes}
+              onCerrar={() => setSelectedId(null)}
+              onCambio={fetchTickets}
+              notificar={addNotification}
+              onEditar={isCliente ? handleEdit : undefined}
+              onEliminar={isCliente ? (t) => setConfirmDelete({ ticketId: t.id, description: t.description }) : undefined}
+            />
           )}
         </AnimatePresence>
 
-        {/* Modal para editar ticket */}
+        {/* Modal para editar la solicitud (cliente, mientras nadie la ha tomado) */}
         <AnimatePresence>
           {editingTicket && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
+              className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[60]"
               onClick={() => {
                 setEditingTicket(null);
                 setEditDescription('');
@@ -748,15 +423,15 @@ export default function App() {
                 className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full"
                 onClick={(e) => e.stopPropagation()}
               >
-                <h3 className="text-lg font-semibold mb-4">Editar Ticket</h3>
+                <h3 className="text-lg font-semibold mb-1">Editar solicitud</h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                  La categoría se actualizará automáticamente según el contenido (motor de reglas).
+                  Al guardar se vuelve a clasificar con el nuevo texto.
                 </p>
                 <textarea
                   value={editDescription}
                   onChange={(e) => setEditDescription(e.target.value)}
-                  placeholder="Descripción del ticket..."
-                  className="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus-visible:ring-2 focus-visible:ring-primary-400 min-h-[100px] resize-y"
+                  placeholder="Describe el problema…"
+                  className="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus-visible:ring-2 focus-visible:ring-primary-400 min-h-[120px] resize-y"
                   disabled={isUpdating}
                 />
                 <div className="flex gap-2 mt-4">
@@ -765,14 +440,7 @@ export default function App() {
                     disabled={isUpdating || !editDescription.trim()}
                     className="btn-primary flex-1 disabled:opacity-50 flex items-center justify-center gap-2"
                   >
-                    {isUpdating ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Actualizando...
-                      </>
-                    ) : (
-                      'Guardar cambios'
-                    )}
+                    {isUpdating ? (<><Loader2 className="w-4 h-4 animate-spin" /> Guardando…</>) : 'Guardar cambios'}
                   </button>
                   <button
                     onClick={() => {
@@ -780,7 +448,7 @@ export default function App() {
                       setEditDescription('');
                     }}
                     disabled={isUpdating}
-                    className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors disabled:opacity-50"
+                    className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors disabled:opacity-50"
                   >
                     Cancelar
                   </button>
@@ -790,14 +458,14 @@ export default function App() {
           )}
         </AnimatePresence>
 
-        {/* Modal de confirmación para eliminar */}
+        {/* Confirmación para eliminar */}
         <AnimatePresence>
           {confirmDelete && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
+              className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[60]"
               onClick={() => setConfirmDelete(null)}
             >
               <motion.div
@@ -811,42 +479,24 @@ export default function App() {
                   <div className="p-2 rounded-full bg-red-500/20">
                     <Trash2 className="w-6 h-6 text-red-500" />
                   </div>
-                  <h3 className="text-lg font-semibold">Confirmar eliminación</h3>
+                  <h3 className="text-lg font-semibold">¿Eliminar la solicitud?</h3>
                 </div>
-                <p className="text-gray-600 dark:text-gray-300 mb-2">
-                  ¿Estás seguro de que quieres eliminar este ticket?
-                </p>
                 <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 mb-4">
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Descripción:</p>
-                  <p className="text-sm text-gray-900 dark:text-gray-100 line-clamp-2">
-                    {confirmDelete.description}
-                  </p>
+                  <p className="text-sm line-clamp-2">{confirmDelete.description}</p>
                 </div>
-                <p className="text-sm text-red-600 dark:text-red-400 mb-4">
-                  Esta acción no se puede deshacer.
-                </p>
+                <p className="text-sm text-red-600 dark:text-red-400 mb-4">Esta acción no se puede deshacer.</p>
                 <div className="flex gap-2">
                   <button
                     onClick={handleDeleteConfirm}
                     disabled={isDeleting === confirmDelete.ticketId}
                     className="btn-primary flex-1 disabled:opacity-50 flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700"
                   >
-                    {isDeleting === confirmDelete.ticketId ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Eliminando...
-                      </>
-                    ) : (
-                      <>
-                        <Trash2 className="w-4 h-4" />
-                        Eliminar
-                      </>
-                    )}
+                    {isDeleting === confirmDelete.ticketId ? (<><Loader2 className="w-4 h-4 animate-spin" /> Eliminando…</>) : (<><Trash2 className="w-4 h-4" /> Eliminar</>)}
                   </button>
                   <button
                     onClick={() => setConfirmDelete(null)}
                     disabled={isDeleting === confirmDelete.ticketId}
-                    className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors disabled:opacity-50"
+                    className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors disabled:opacity-50"
                   >
                     Cancelar
                   </button>
@@ -857,7 +507,7 @@ export default function App() {
         </AnimatePresence>
 
         {/* Notificaciones */}
-        <div className="fixed top-4 right-4 z-40 space-y-2">
+        <div className="fixed bottom-4 right-4 z-[70] space-y-2" aria-live="polite">
           <AnimatePresence>
             {notifications.map((notification) => (
               <motion.div
@@ -865,9 +515,8 @@ export default function App() {
                 initial={{ opacity: 0, x: 300 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 300 }}
-                className={`p-4 rounded-lg shadow-lg ${
-                  notification.type === 'success' ? 'bg-green-600' :
-                  notification.type === 'error' ? 'bg-red-600' : 'bg-blue-600'
+                className={`p-4 rounded-lg shadow-lg max-w-sm ${
+                  notification.type === 'success' ? 'bg-green-600' : notification.type === 'error' ? 'bg-red-600' : 'bg-blue-600'
                 } text-white`}
               >
                 {notification.message}
@@ -890,18 +539,7 @@ export default function App() {
                   clipPath: highlightedElement && !isMobile
                     ? (() => {
                         const rect = highlightedElement.getBoundingClientRect();
-                        return `polygon(
-                          0% 0%,
-                          0% 100%,
-                          ${rect.left}px 100%,
-                          ${rect.left}px ${rect.top}px,
-                          ${rect.right}px ${rect.top}px,
-                          ${rect.right}px ${rect.bottom}px,
-                          ${rect.left}px ${rect.bottom}px,
-                          ${rect.left}px 100%,
-                          100% 100%,
-                          100% 0%
-                        )`;
+                        return `polygon(0% 0%, 0% 100%, ${rect.left}px 100%, ${rect.left}px ${rect.top}px, ${rect.right}px ${rect.top}px, ${rect.right}px ${rect.bottom}px, ${rect.left}px ${rect.bottom}px, ${rect.left}px 100%, 100% 100%, 100% 0%)`;
                       })()
                     : undefined,
                 }}
@@ -915,77 +553,44 @@ export default function App() {
                     isMobile ? 'left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2' : ''
                   }`}
                   style={
-                    !isMobile && highlightedElement
+                    !isMobile
                       ? {
-                          top: Math.min(
-                            highlightedElement.getBoundingClientRect().bottom + 16,
-                            window.innerHeight - 280
-                          ),
-                          left: Math.max(
-                            16,
-                            Math.min(
-                              highlightedElement.getBoundingClientRect().left,
-                              window.innerWidth - 400
-                            )
-                          ),
+                          top: Math.min(highlightedElement.getBoundingClientRect().bottom + 16, window.innerHeight - 260),
+                          left: Math.max(16, Math.min(highlightedElement.getBoundingClientRect().left, window.innerWidth - 420)),
                         }
-                      : {
-                          maxHeight: '80vh',
-                          overflowY: 'auto',
-                        }
+                      : { maxHeight: '80vh', overflowY: 'auto' }
                   }
                   onClick={(e) => e.stopPropagation()}
                 >
                   <div className="flex items-start justify-between mb-3">
-                    <h3 className="text-base sm:text-lg font-semibold pr-2 flex-1">
-                      {tourSteps[tourStepIndex]?.title}
-                    </h3>
+                    <h3 className="text-base sm:text-lg font-semibold pr-2 flex-1">{tourSteps[tourStepIndex]?.title}</h3>
                     <button
                       onClick={finishTour}
-                      className="flex-shrink-0 p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+                      className="flex-shrink-0 p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-slate-500 hover:text-red-500 transition-colors"
                       aria-label="Cerrar tour"
-                      title="Cerrar tour"
                     >
                       <X className="w-5 h-5" />
                     </button>
                   </div>
-                  <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 mb-4">
-                    {tourSteps[tourStepIndex]?.description}
-                  </p>
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-0 mt-4 sm:mt-5">
-                    <span className="text-xs text-slate-400 text-center sm:text-left order-2 sm:order-1">
-                      Paso {tourStepIndex + 1} de {tourSteps.length}
-                    </span>
-                    <div className="flex gap-2 justify-center sm:justify-end order-1 sm:order-2">
+                  <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 mb-4">{tourSteps[tourStepIndex]?.description}</p>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-xs text-slate-400">Paso {tourStepIndex + 1} de {tourSteps.length}</span>
+                    <div className="flex gap-2">
                       <button
                         onClick={() => setTourStepIndex((prev) => Math.max(prev - 1, 0))}
                         disabled={tourStepIndex === 0}
-                        className="px-4 py-2 text-sm rounded border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors min-w-[90px]"
+                        className="px-4 py-2 text-sm rounded border border-slate-300 dark:border-slate-700 disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                       >
                         Atrás
                       </button>
                       <button
-                        onClick={() => {
-                          if (tourStepIndex >= tourSteps.length - 1) {
-                            finishTour();
-                          } else {
-                            setTourStepIndex((prev) => Math.min(prev + 1, tourSteps.length - 1));
-                          }
-                        }}
-                        className="btn-primary px-4 py-2 text-sm min-w-[110px]"
+                        onClick={() => (tourStepIndex >= tourSteps.length - 1 ? finishTour() : setTourStepIndex(tourStepIndex + 1))}
+                        className="btn-primary px-4 py-2 text-sm"
                       >
-                        {tourStepIndex >= tourSteps.length - 1 ? 'Finalizar' : 'Siguiente'}
+                        {tourStepIndex >= tourSteps.length - 1 ? 'Entendido' : 'Siguiente'}
                       </button>
                     </div>
                   </div>
-                  {isMobile && (
-                    <button
-                      onClick={finishTour}
-                      className="mt-3 w-full text-center text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 underline py-2"
-                    >
-                      Omitir tour completo
-                    </button>
-                  )}
                 </motion.div>
               )}
             </>
