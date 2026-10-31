@@ -7,5 +7,5 @@ import { readFileSync } from 'node:fs'
 const login = readFileSync(new URL('../src/components/LoginRegister.tsx', import.meta.url), 'utf8')
 
 test('la pantalla de inicio de sesión muestra el título de la aplicación', () => {
-  assert.match(login, />Mesa de Ayuda</)
+  assert.ok(login.includes('>Mesa de Ayuda (Prueba despliegue continuo)<'))
 })
