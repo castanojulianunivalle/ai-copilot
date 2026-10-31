@@ -74,7 +74,7 @@ export default function LoginRegister({ onSignIn, onSignUp, onResetPassword }: P
         <div className="flex justify-center mb-6">
           <img src="/logo.svg" alt="Logo" className="h-16 w-16" />
         </div>
-        <h1 className="text-2xl font-bold text-center mb-2">Mesa de Ayuda (Prueba despliegue continuo)</h1>
+        <h1 className="text-2xl font-bold text-center mb-2">Mesa de Ayuda</h1>
         <p className="text-gray-500 dark:text-gray-400 text-center mb-6">Support Co-Pilot</p>
 
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
