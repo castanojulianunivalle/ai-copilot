@@ -311,7 +311,7 @@ export default function App() {
             <img src="/logo.svg" alt="AI Support Co-Pilot Logo" className="h-11 w-11" />
             <div>
               <h1 className="text-xl sm:text-2xl font-bold text-white">
-                {isAgente ? 'Mesa de atención · AI Support Co-Pilot' : 'Centro de ayuda · AI Support Co-Pilot'}
+                {isAgente ? 'Mesa de atención' : 'Centro de ayuda'}
               </h1>
               <p className="text-sm text-white/75">
                 {isAgente ? 'Atiende las solicitudes de los clientes, clasificadas por IA.' : 'Pide ayuda y sigue el avance de tus casos.'}
