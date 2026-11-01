@@ -86,3 +86,18 @@ def test_cors_rechaza_otro_origen(api_con_cors_restringido):
     r = _preflight(api_con_cors_restringido, "https://otro-sitio.example")
     assert r.status_code == 400
     assert "access-control-allow-origin" not in r.headers
+
+
+def test_la_imagen_copia_todos_los_modulos_locales_que_importa_main():
+    """La v3.0.0 falló en Render porque el Dockerfile no copiaba notificaciones.py (HU-05)."""
+    import ast
+    from pathlib import Path
+
+    raiz = Path(__file__).resolve().parent.parent
+    arbol = ast.parse((raiz / "main.py").read_text(encoding="utf-8"))
+    modulos = {n.module.split(".")[0] for n in ast.walk(arbol) if isinstance(n, ast.ImportFrom) and n.module}
+    modulos |= {a.name.split(".")[0] for n in ast.walk(arbol) if isinstance(n, ast.Import) for a in n.names}
+    locales = {m for m in modulos if (raiz / f"{m}.py").exists() or (raiz / m).is_dir()}
+    copiados = " ".join(l for l in (raiz / "Dockerfile").read_text(encoding="utf-8").splitlines() if l.startswith("COPY"))
+    faltan = [m for m in sorted(locales) if f"{m}.py" not in copiados and f" {m} " not in copiados + " "]
+    assert not faltan, f"El Dockerfile no copia: {faltan}"
