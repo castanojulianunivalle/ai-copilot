@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { BarChart3, Bot, CalendarRange, CheckCircle2, Clock, Inbox, Loader2, AlertTriangle } from 'lucide-react';
 import {
-  Bar, BarChart, CartesianGrid, Cell, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
+  Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts';
 import { supabase } from '../lib/supabase';
 
@@ -140,10 +140,14 @@ export default function Reportes() {
             <Panel titulo="Por estado">
               <ResponsiveContainer>
                 <PieChart>
-                  <Pie data={datos.por_estado} dataKey="total" nameKey="nombre" innerRadius="45%" outerRadius="75%" label={(e: Conteo) => `${e.nombre}: ${e.total}`}>
+                  <Pie data={datos.por_estado} dataKey="total" nameKey="nombre" innerRadius="45%" outerRadius="75%">
                     {datos.por_estado.map(e => <Cell key={e.nombre} fill={COLOR_ESTADO[e.nombre] ?? COLOR_BASE} />)}
                   </Pie>
                   <Tooltip {...tooltip} />
+                  <Legend formatter={(nombre: string) => {
+                    const e = datos.por_estado.find(x => x.nombre === nombre);
+                    return `${nombre}: ${e?.total ?? 0}`;
+                  }} />
                 </PieChart>
               </ResponsiveContainer>
             </Panel>
