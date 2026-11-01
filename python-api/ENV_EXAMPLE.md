@@ -44,3 +44,19 @@ CORS_ORIGINS=https://aiscop-web.onrender.com
 - **CORS_ORIGINS**: origenes que pueden llamar a la API desde el navegador, separados por comas. En Render lleva la URL del frontend. Sin la variable queda abierto (`*`), como en local.
 - **RENDER_GIT_COMMIT**: no se configura. Render la inyecta en cada deploy, y `/health` la devuelve recortada en `commit`, junto a `version` (de `version.py`). Asi se comprueba que la nube corre el tag que se presenta. Fuera de Render se puede pasar `GIT_COMMIT`.
 - En Render, las llaves (`SUPABASE_SERVICE_ROLE_KEY`, `LLM_API_KEY`) viven en las variables del servicio, no en el repositorio. `deploy/render_nube.py` las fija sin imprimirlas. El procedimiento completo esta en `DEPLOY.md`.
+
+---
+
+## Notificaciones de tickets urgentes (Semestre 3 · HU-05)
+
+```
+N8N_WEBHOOK_URL=https://n8ntest.soylideria.com/webhook/aiscop-ticket-urgente
+N8N_WEBHOOK_SECRET=<el mismo valor de la credencial «AISCOP webhook secreto» en n8n>
+APP_URL=https://aiscop-web-77xc.onrender.com
+```
+
+- **N8N_WEBHOOK_URL**: webhook del flujo «AISCOP · HU-05 · Ticket urgente → correo». Sin la variable, la notificación queda apagada y la API funciona igual.
+- **N8N_WEBHOOK_SECRET**: va en el encabezado `X-AISCOP-Secret`. n8n responde 403 sin él.
+- **APP_URL**: el enlace «Abrir en la Mesa de Ayuda» del correo.
+- Se notifican solo los tickets de prioridad **Alta**, la más alta de la taxonomía. El modelo la asigna también cuando el tono es «Urgente» o «Frustrado».
+- La llamada corre en segundo plano con un límite de 10 s. Si n8n falla, el ticket ya está creado y el cliente no ve ningún error.

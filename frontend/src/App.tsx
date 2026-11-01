@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState, Fragment } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState, Fragment } from 'react';
 import { supabase } from './lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Loader2, Trash2, X, LogOut, Users, Headphones, UserRound, RefreshCw } from 'lucide-react';
+import { Loader2, Trash2, X, LogOut, Users, Headphones, UserRound, RefreshCw, BarChart3 } from 'lucide-react';
 import ThemeToggle from './components/ThemeToggle';
 import { useAuth } from './contexts/AuthContext';
 import LoginRegister from './components/LoginRegister';
@@ -9,6 +9,8 @@ import AdminUsers from './components/AdminUsers';
 import ResetPassword from './components/ResetPassword';
 import VersionInfo from './components/VersionInfo';
 import BandejaAgente from './components/BandejaAgente';
+// HU-07: Recharts pesa; se descarga solo cuando un agente abre los reportes.
+const Reportes = lazy(() => import('./components/Reportes'));
 import MisSolicitudes from './components/MisSolicitudes';
 import PanelTicket from './components/PanelTicket';
 import { API_URL } from './lib/api';
@@ -54,6 +56,8 @@ export default function App() {
   const [highlightedElement, setHighlightedElement] = useState<HTMLElement | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [adminView, setAdminView] = useState(false);
+  // HU-07: reportes para agentes y administradores
+  const [reportesView, setReportesView] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -321,12 +325,22 @@ export default function App() {
           <div className="flex items-center gap-2">
             {isAdministrador && (
               <button
-                onClick={() => setAdminView(!adminView)}
+                onClick={() => { setAdminView(!adminView); setReportesView(false); }}
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors text-white ${adminView ? 'bg-white/30' : 'bg-white/10 hover:bg-white/20'}`}
                 title={adminView ? 'Ver la bandeja' : 'Gestión de usuarios'}
               >
                 <Users className="w-4 h-4 inline mr-1.5 -mt-0.5" />
                 {adminView ? 'Bandeja' : 'Usuarios'}
+              </button>
+            )}
+            {isAgente && (
+              <button
+                onClick={() => { setReportesView(!reportesView); setAdminView(false); }}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors text-white ${reportesView ? 'bg-white/30' : 'bg-white/10 hover:bg-white/20'}`}
+                title={reportesView ? 'Ver la bandeja' : 'Reportes y estadísticas'}
+              >
+                <BarChart3 className="w-4 h-4 inline mr-1.5 -mt-0.5" />
+                {reportesView ? 'Bandeja' : 'Reportes'}
               </button>
             )}
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/10 text-white" title={session.user.email ?? ''}>
@@ -358,6 +372,10 @@ export default function App() {
 
         {adminView && isAdministrador ? (
           <AdminUsers />
+        ) : reportesView && isAgente ? (
+          <Suspense fallback={<Loader2 className="w-8 h-8 animate-spin mx-auto my-10 text-primary-500" />}>
+            <Reportes />
+          </Suspense>
         ) : (
           <Fragment>
             {isAgente && profile && (
