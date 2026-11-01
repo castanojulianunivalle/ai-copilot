@@ -4,6 +4,7 @@ Backend FastAPI. Clasificación por reglas (Semestre 1) + LLM (Semestre 2).
 HU-01: Auth con roles | HU-02/03/04: CRUD y clasificación | Admin: gestión de usuarios.
 HU-06: Clasificación con LLM | HU-09: Sentimiento y priorización automática.
 HU-13: atención por agentes (tomar, liberar y reasignar tickets; comentarios e historial).
+HU-05: los tickets de prioridad Alta se notifican por correo con un webhook de n8n.
 """
 import json
 import logging
@@ -27,6 +28,7 @@ from ai.llm_client import ConfigLLM
 # evaluacion (Sprint 6) lo importe sin arrastrar FastAPI ni Supabase.
 from ai.reglas import classify_with_rules
 from ai.revision import motivo_revision
+from notificaciones import armar_payload, es_urgente, notificar_urgente
 from version import VERSION
 
 logging.basicConfig(
@@ -161,6 +163,20 @@ def reclasificar_ticket(ticket_id: str, texto: str) -> bool:
             return True
     logger.warning("Ticket %s sigue pendiente de reclasificar tras %d intentos", ticket_id, intentos)
     return False
+
+
+def notificar_ticket_urgente(ticket_id: str, user_id: str, titulo: str, descripcion: str, campos: dict) -> bool:
+    """HU-05: corre en segundo plano, después de responder. Busca el correo del cliente y llama a n8n."""
+    cliente = None
+    try:
+        supabase = get_supabase()
+        if supabase and user_id != "dev-user":
+            perfil = supabase.table("profiles").select("email").eq("id", user_id).execute()
+            cliente = perfil.data[0].get("email") if perfil.data else None
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("HU-05: no se pudo leer el correo del cliente %s: %s", user_id, exc)
+    return notificar_urgente(armar_payload(ticket_id, titulo, descripcion, cliente, campos["category"],
+                                           campos["prioridad"], campos["sentimiento"]))
 
 
 def _registrar_clasificacion(supabase, ticket_id: str, texto: str, resultado: ResultadoClasificacion) -> None:
@@ -325,6 +341,8 @@ def create_ticket(ticket: TicketIn, tareas: BackgroundTasks, auth: Tuple[str, st
     _registrar_clasificacion(supabase, ticket_id, texto, resultado)
     if ticket_data["reclasificar"]:
         tareas.add_task(reclasificar_ticket, ticket_id, texto)
+    if es_urgente(ticket_data["prioridad"]):
+        tareas.add_task(notificar_ticket_urgente, ticket_id, user_id, ticket.titulo, ticket.description, ticket_data)
 
     clasificacion = resultado.clasificacion
     return {

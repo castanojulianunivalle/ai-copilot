@@ -12,6 +12,7 @@ Variables de entorno:
     RENDER_API_KEY          llave de la API de Render
     SUPABASE_ACCESS_TOKEN   para leer las llaves del proyecto de Supabase sin copiarlas a mano
     LLM_API_KEY             llave de Groq; si falta se lee de python-api/.env
+    N8N_WEBHOOK_SECRET      secreto del webhook de n8n (HU-05); si falta se lee de python-api/.env
 Los valores secretos solo viajan a la API de Render: el script no los imprime.
 """
 from __future__ import annotations
@@ -55,8 +56,12 @@ def declarados(llaves: dict, urls: dict) -> list[dict]:
             "LLM_MAX_TOKENS": "1500",
             # Mientras el frontend no exista queda abierto; `aplicar` lo cierra en la segunda pasada.
             "CORS_ORIGINS": urls.get(WEB, "*"),
+            # HU-05: tickets de prioridad Alta notificados por correo con n8n.
+            "N8N_WEBHOOK_URL": "https://n8ntest.soylideria.com/webhook/aiscop-ticket-urgente",
+            "N8N_WEBHOOK_SECRET": llaves["n8n"],
+            "APP_URL": urls.get(WEB, ""),
         },
-        "secretas": {"SUPABASE_SERVICE_ROLE_KEY", "LLM_API_KEY"},
+        "secretas": {"SUPABASE_SERVICE_ROLE_KEY", "LLM_API_KEY", "N8N_WEBHOOK_SECRET"},
     }, {
         "nombre": WEB,
         "crear": {"type": "static_site", "name": WEB, "repo": REPO, "branch": RAMA, "rootDir": "frontend",
@@ -116,7 +121,10 @@ def llaves_nube() -> dict:
     llm = os.getenv("LLM_API_KEY") or leer_env_local("LLM_API_KEY")
     if not llm:
         sys.exit("Falta LLM_API_KEY (variable de entorno o python-api/.env).")
-    return {**llaves_supabase(proyecto["id"]), "llm": llm}
+    n8n = os.getenv("N8N_WEBHOOK_SECRET") or leer_env_local("N8N_WEBHOOK_SECRET")
+    if not n8n:
+        sys.exit("Falta N8N_WEBHOOK_SECRET (variable de entorno o python-api/.env).")
+    return {**llaves_supabase(proyecto["id"]), "llm": llm, "n8n": n8n}
 
 
 def urls_existentes() -> tuple[dict, dict]:
