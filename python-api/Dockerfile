@@ -9,7 +9,7 @@ WORKDIR /app
 COPY requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r /app/requirements.txt
 
-COPY main.py version.py /app/
+COPY main.py version.py notificaciones.py /app/
 # Paquete del componente inteligente (Sprint 5): cliente LLM, prompts y parser
 COPY ai /app/ai
 

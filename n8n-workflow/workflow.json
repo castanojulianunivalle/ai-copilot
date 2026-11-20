@@ -1,0 +1,79 @@
+{
+  "name": "AI Support Co-Pilot",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "support-copilot-webhook",
+        "responseMode": "onReceived"
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ ($json.sentiment || ($json.body && $json.body.sentiment) || '').toLowerCase() }}",
+              "operation": "equals",
+              "value2": "negativo"
+            }
+          ]
+        }
+      },
+      "name": "If Sentiment Negative",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [520, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $vars.EMAIL_FROM || $json.email_from || ($json.body && $json.body.email_from) || '' }}",
+        "toEmail": "={{ $vars.EMAIL_TO || $json.email_to || ($json.body && $json.body.email_to) || '' }}",
+        "subject": "={{ $json.email_subject || ($json.body && $json.body.email_subject) || '⚠️ Ticket con sentimiento negativo - Support Co-Pilot' }}",
+        "text": "={{ (() => { const ticketId = $json.body && $json.body.id || $json.id || 'N/A'; const frontendUrl = $vars.FRONTEND_URL || 'https://tu-app.vercel.app'; const ticketUrl = ticketId !== 'N/A' ? frontendUrl + '/?ticket=' + ticketId : frontendUrl; return 'Se ha recibido un ticket con sentimiento negativo:\\n\\n' +\n  'Descripción: ' + ($json.body && $json.body.description || $json.description || 'N/A') + '\\n' +\n  'Categoría: ' + ($json.body && $json.body.category || $json.category || 'N/A') + '\\n' +\n  'Sentimiento: ' + ($json.body && $json.body.sentiment || $json.sentiment || 'N/A') + '\\n' +\n  'ID del Ticket: ' + ticketId + '\\n\\n' +\n  'Ver detalle del ticket: ' + ticketUrl + '\\n\\n' +\n  'Por favor, revisar con prioridad.'; })() }}",
+        "html": "={{ (() => { const ticketId = $json.body && $json.body.id || $json.id || 'N/A'; const frontendUrl = $vars.FRONTEND_URL || 'https://tu-app.vercel.app'; const ticketUrl = ticketId !== 'N/A' ? frontendUrl + '/?ticket=' + ticketId : frontendUrl; return '<div style=\"font-family: Arial, sans-serif; background-color: #f8fafc; padding: 24px;\">' +\n  '<div style=\"max-width: 640px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;\">' +\n  '<div style=\"background: #dc2626; color: #ffffff; padding: 16px 20px;\">' +\n  '<h2 style=\"margin: 0; font-size: 18px;\">\\u26a0\\ufe0f Ticket con sentimiento negativo</h2>' +\n  '</div>' +\n  '<div style=\"padding: 20px; color: #0f172a;\">' +\n  '<p style=\"margin: 0 0 12px;\">Se detectó un ticket con sentimiento negativo. Revisa el detalle:</p>' +\n  '<table style=\"width: 100%; border-collapse: collapse;\">' +\n  '<tr><td style=\"padding: 8px 0; font-weight: 600; width: 140px;\">Descripción</td><td style=\"padding: 8px 0;\">' + ($json.body && $json.body.description || $json.description || 'N/A') + '</td></tr>' +\n  '<tr><td style=\"padding: 8px 0; font-weight: 600;\">Categoría</td><td style=\"padding: 8px 0;\">' + ($json.body && $json.body.category || $json.category || 'N/A') + '</td></tr>' +\n  '<tr><td style=\"padding: 8px 0; font-weight: 600;\">Sentimiento</td><td style=\"padding: 8px 0;\">' + ($json.body && $json.body.sentiment || $json.sentiment || 'N/A') + '</td></tr>' +\n  '<tr><td style=\"padding: 8px 0; font-weight: 600;\">ID del Ticket</td><td style=\"padding: 8px 0; font-family: monospace;\">' + ticketId + '</td></tr>' +\n  '</table>' +\n  '<div style=\"margin-top: 20px;\">' +\n  '<a href=\"' + ticketUrl + '\" style=\"display: inline-block; padding: 10px 16px; background: #2563eb; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 500;\">🔗 Ver detalle del ticket</a>' +\n  '<span style=\"margin-left: 12px; color: #475569; font-size: 12px;\">Click para abrir directamente el ticket #' + (ticketId !== 'N/A' ? ticketId.slice(-8) : '') + '</span>' +\n  '</div>' +\n  '</div>' +\n  '<div style=\"background: #f1f5f9; padding: 12px 20px; color: #64748b; font-size: 12px;\">AI Support Co-Pilot</div>' +\n  '</div>' +\n  '</div>'; })() }}"
+      },
+      "name": "Send Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "continueOnFail": true,
+      "position": [760, 220]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $vars.TELEGRAM_CHAT_ID || $json.telegram_chat_id || ($json.body && $json.body.telegram_chat_id) || '' }}",
+        "text": "={{ (() => { const ticketId = $json.body && $json.body.id || $json.id || 'N/A'; const frontendUrl = $vars.FRONTEND_URL || 'https://tu-app.vercel.app'; const ticketUrl = ticketId !== 'N/A' ? frontendUrl + '/?ticket=' + ticketId : frontendUrl; return '⚠️ *Ticket con sentimiento negativo*\\n\\n' +\n  '*Descripción:* ' + ($json.body && $json.body.description || $json.description || 'N/A') + '\\n' +\n  '*Categoría:* ' + ($json.body && $json.body.category || $json.category || 'N/A') + '\\n' +\n  '*Sentimiento:* ' + ($json.body && $json.body.sentiment || $json.sentiment || 'N/A') + '\\n' +\n  '*ID del Ticket:* `' + ticketId + '`\\n\\n' +\n  '[🔗 Ver detalle del ticket](' + ticketUrl + ')' +\n  (ticketId !== 'N/A' ? '\\n\\n_Ticket #' + ticketId.slice(-8) + '_' : ''); })() }}",
+        "parseMode": "Markdown"
+      },
+      "name": "Send Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [760, 380],
+      "credentials": {
+        "telegramApi": {
+          "id": "1",
+          "name": "Telegram Bot"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{"node": "If Sentiment Negative", "type": "main", "index": 0}]]
+    },
+    "If Sentiment Negative": {
+      "main": [
+        [
+          {"node": "Send Email", "type": "main", "index": 0},
+          {"node": "Send Telegram", "type": "main", "index": 0}
+        ],
+        []
+      ]
+    }
+  },
+  "active": false
+}
